@@ -52,10 +52,11 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         videoId = target.split('/embed/')[1]?.split('?')[0] || '';
       }
       if (videoId) {
-        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&enablejsapi=1&controls=1`;
+        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&enablejsapi=1&controls=1&modestbranding=1`;
       }
     }
-    return target;
+    // Authentic 24/7 Euronews / France 24 Live news fallback
+    return `https://www.youtube-nocookie.com/embed/gCNeDWCI010?autoplay=1&mute=0&enablejsapi=1&controls=1&modestbranding=1`;
   };
 
   // Reset states on channel change
@@ -78,13 +79,11 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       setIsLoading(false);
       setHasError(false);
     } else {
-      // Loop back to primary after 3 seconds silent delay
-      console.log('[manibuTV Silent Auto-Recovery] Retrying Primary Mirror in 3s...');
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = setTimeout(() => {
-        setCurrentMirror('primary');
-        setIsIframeMode(false);
-      }, 3000);
+      // If all fail or no embed, force web embed mode with fallback live stream
+      console.log('[manibuTV Silent Auto-Recovery] Activating Web Live Player Engine...');
+      setIsIframeMode(true);
+      setIsLoading(false);
+      setHasError(false);
     }
   }, [currentMirror, channel.backupUrl, channel.embedUrl]);
 
@@ -110,7 +109,20 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       hlsRef.current = null;
     }
 
-    const streamUrl = (currentMirror === 'backup' && channel.backupUrl) ? channel.backupUrl : channel.url;
+    // 2.5s Watchdog: If stream doesn't parse manifest within 2500ms, auto switch mirror instantly
+    const watchdogTimer = setTimeout(() => {
+      console.log('[manibuTV Watchdog] Stream response timeout (>2.5s). Silent failover triggered.');
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      handleSilentFailover();
+    }, 2500);
+
+    const rawStreamUrl = (currentMirror === 'backup' && channel.backupUrl) ? channel.backupUrl : channel.url;
+    const streamUrl = (rawStreamUrl && rawStreamUrl.startsWith('http'))
+      ? `/api/proxy-hls?url=${encodeURIComponent(rawStreamUrl)}`
+      : rawStreamUrl;
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -118,10 +130,10 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         lowLatencyMode: true,
         backBufferLength: 60,
         maxBufferLength: isDataSaver ? 10 : 30,
-        manifestLoadingTimeOut: 8000,
-        manifestLoadingMaxRetry: 3,
-        levelLoadingTimeOut: 8000,
-        fragLoadingTimeOut: 10000,
+        manifestLoadingTimeOut: 3000,
+        manifestLoadingMaxRetry: 1,
+        levelLoadingTimeOut: 3000,
+        fragLoadingTimeOut: 3000,
       });
 
       hlsRef.current = hls;
@@ -130,6 +142,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+        clearTimeout(watchdogTimer);
         setIsLoading(false);
         setHasError(false);
         video.play().then(() => setIsPlaying(true)).catch(() => {
@@ -151,32 +164,26 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              // Silent failover without popping loud errors
-              handleSilentFailover();
-              hls.destroy();
-              break;
-          }
+          clearTimeout(watchdogTimer);
+          // Silent instant failover without infinite looping
+          handleSilentFailover();
+          hls.destroy();
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = streamUrl;
       video.addEventListener('loadedmetadata', () => {
+        clearTimeout(watchdogTimer);
         setIsLoading(false);
         setHasError(false);
         video.play().then(() => setIsPlaying(true)).catch(() => {});
       });
       video.addEventListener('error', () => {
+        clearTimeout(watchdogTimer);
         handleSilentFailover();
       });
     } else {
+      clearTimeout(watchdogTimer);
       handleSilentFailover();
     }
 
@@ -184,14 +191,15 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
     const handleWaiting = () => {
       setIsLoading(true);
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
-      // If stalled for > 3.5 seconds, silently attempt failover mirror
+      // If stalled for > 2.5 seconds, silently attempt failover mirror
       stallTimeoutRef.current = setTimeout(() => {
         console.log('[manibuTV] Broadcast stalled, silently recovering...');
         handleSilentFailover();
-      }, 3500);
+      }, 2500);
     };
 
     const handlePlaying = () => {
+      clearTimeout(watchdogTimer);
       setIsLoading(false);
       setHasError(false);
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
@@ -202,6 +210,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
     video.addEventListener('playing', handlePlaying);
 
     return () => {
+      clearTimeout(watchdogTimer);
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('stalled', handleWaiting);
       video.removeEventListener('playing', handlePlaying);

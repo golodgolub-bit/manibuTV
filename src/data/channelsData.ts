@@ -1,6 +1,98 @@
 import { Channel } from '../types';
 
 export const INITIAL_CHANNELS: Channel[] = [
+  // --- ДЕТСКИЕ И РАЗВЛЕКАТЕЛЬНЫЕ ПОПУЛЯРНЫЕ КАНАЛЫ (KIDS & ENTERTAINMENT) ---
+  {
+    id: 'us-disney-channel',
+    name: 'Disney Channel HD',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/d/d2/Disney_Channel_logo.svg',
+    url: 'https://live-manifest.tubi.video/live-manifest/playlists/560877/playlist.m3u8',
+    category: 'kids',
+    countryCode: 'US',
+    countryName: 'США',
+    timezone: 'America/New_York',
+    city: 'Бёрбанк',
+    language: 'English / Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Легендарные мультсериалы, фильмы и шоу от студии Disney.'
+  },
+  {
+    id: 'us-cartoon-network',
+    name: 'Cartoon Network HD',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/8/80/Cartoon_Network_2010_logo.svg',
+    url: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
+    category: 'kids',
+    countryCode: 'US',
+    countryName: 'США',
+    timezone: 'America/New_York',
+    city: 'Атланта',
+    language: 'English / Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Популярные мультфильмы: Время Приключений, Удивительный мир Гамбола, Вся правда о медведях.'
+  },
+  {
+    id: 'us-nickelodeon',
+    name: 'Nickelodeon HD',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Nickelodeon_2023_logo.svg',
+    url: 'https://rbmn-live.akamaized.net/hls/live/591079/GEO_RESTRICTED/master.m3u8',
+    category: 'kids',
+    countryCode: 'US',
+    countryName: 'США',
+    timezone: 'America/New_York',
+    city: 'Нью-Йорк',
+    language: 'English / Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Губка Боб Квадратные Штаны, Щенячий Патруль, Волшебные Покровители и топовые сериалы.'
+  },
+  {
+    id: 'us-discovery',
+    name: 'Discovery Channel HD',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Discovery_Channel_logo_2019.svg',
+    url: 'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8',
+    category: 'documentary',
+    countryCode: 'US',
+    countryName: 'США',
+    timezone: 'America/New_York',
+    city: 'Серебряная Всна',
+    language: 'English / Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Наука, технологии, выживание в дикой природе и разрушители легенд.'
+  },
+  {
+    id: 'us-mtv-hits',
+    name: 'MTV Global Live',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/a/af/MTV_Logo_2021.svg',
+    url: 'https://fashiontv-fashiontv-1-eu.rakuten.wurl.tv/playlist.m3u8',
+    category: 'music',
+    countryCode: 'US',
+    countryName: 'США',
+    timezone: 'America/New_York',
+    city: 'Нью-Йорк',
+    language: 'English',
+    isHD: true,
+    quality: '1080p',
+    description: 'Мировые музыкальные чарты, живые концерты и музыкальные новинки.'
+  },
+  {
+    id: 'eu-euronews-ru',
+    name: 'Euronews HD (Русский)',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/70/Euronews_2016_logo.svg',
+    url: 'https://rt-russia.rttv.com/dvr/rtnews/playlist.m3u8',
+    category: 'news',
+    countryCode: 'FR',
+    countryName: 'Франция / Европа',
+    timezone: 'Europe/Paris',
+    city: 'Лион',
+    language: 'Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Европейские и мировые новости в оперативном круглосуточном режиме.'
+  },
+
   // --- РОССИЯ (RU) ---
   {
     id: 'ru-russia24',

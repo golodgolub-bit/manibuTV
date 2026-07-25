@@ -9,7 +9,7 @@ app.use(express.json());
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "Glace TV" });
+  res.json({ status: "ok", service: "manibuTV" });
 });
 
 async function startServer() {
@@ -28,7 +28,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Glace TV Server running on http://0.0.0.0:${PORT}`);
+    console.log(`manibuTV Server running on http://0.0.0.0:${PORT}`);
   });
 }
 

@@ -7,11 +7,11 @@ import { VideoPlayer } from './components/VideoPlayer';
 import { ChannelDetailsBar } from './components/ChannelDetailsBar';
 import { INITIAL_CHANNELS, fetchIPTVOrgChannels, fetchFamelackChannels } from './data/channelsData';
 import { Channel } from './types';
-import { RefreshCw, Radio, Sparkles, MessageCircle, Heart } from 'lucide-react';
+import { RefreshCw, Radio, Sparkles, MessageCircle, Tv } from 'lucide-react';
 
 export default function App() {
   const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
-  const [selectedChannel, setSelectedChannel] = useState<Channel>(INITIAL_CHANNELS[0]);
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   
   // Filters
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -130,14 +130,14 @@ export default function App() {
     });
   }, [channels, selectedCategory, selectedCountry, isFavoritesOnly, favorites, searchQuery]);
 
-  // Auto-switch selected channel if filtered channel list updates
+  // Auto-switch selected channel if filtered channel list updates in favorites mode
   useEffect(() => {
-    if (isFavoritesOnly && filteredChannels.length > 0) {
+    if (isFavoritesOnly && filteredChannels.length > 0 && selectedChannel) {
       if (!favorites.includes(selectedChannel.id)) {
-        setSelectedChannel(filteredChannels[0]);
+        setSelectedChannel(filteredChannels[0] || null);
       }
     }
-  }, [isFavoritesOnly, filteredChannels, favorites, selectedChannel.id]);
+  }, [isFavoritesOnly, filteredChannels, favorites, selectedChannel]);
 
   const getCategoryCount = useCallback((catId: string) => {
     if (catId === 'ALL') return channels.length;
@@ -172,16 +172,43 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 mt-3 space-y-6">
 
-        {/* Active Video Player + Detailed Clock & Region Bar */}
-        <section className="space-y-4">
-          <VideoPlayer channel={selectedChannel} />
-          
-          <ChannelDetailsBar
-            channel={selectedChannel}
-            isFavorite={favorites.includes(selectedChannel.id)}
-            onToggleFavorite={() => toggleFavorite(selectedChannel.id)}
-          />
-        </section>
+        {/* Active Video Player OR Welcome Hero Banner */}
+        {selectedChannel ? (
+          <section className="space-y-4">
+            <VideoPlayer channel={selectedChannel} />
+            
+            <ChannelDetailsBar
+              channel={selectedChannel}
+              isFavorite={favorites.includes(selectedChannel.id)}
+              onToggleFavorite={() => toggleFavorite(selectedChannel.id)}
+            />
+          </section>
+        ) : (
+          <section className="glass-card rounded-3xl p-8 sm:p-10 border border-white/80 shadow-xl text-center space-y-4 bg-gradient-to-b from-white/95 via-rose-50/50 to-pink-50/30">
+            <div className="inline-flex p-4 sm:p-5 rounded-3xl bg-gradient-to-tr from-rose-500 via-pink-500 to-rose-600 text-white shadow-lg border border-white/80">
+              <Tv className="w-10 h-10 sm:w-12 sm:h-12" />
+            </div>
+            <div className="space-y-1.5 max-w-xl mx-auto">
+              <h2 className="text-xl sm:text-2xl font-bold font-script text-rose-950">
+                Добро пожаловать в manibuTV ❀
+              </h2>
+              <p className="text-xs sm:text-sm text-rose-800/80 font-sans-ui leading-relaxed">
+                Выберите любой телеканал из списка ниже, чтобы запустить прямой эфир со всего мира!
+              </p>
+            </div>
+            <div className="pt-1 flex flex-wrap items-center justify-center gap-2 text-xs font-soft text-rose-900">
+              <span className="px-3 py-1 rounded-full bg-white/80 border border-rose-200/80 shadow-sm">
+                📺 {channels.length}+ телеканалов
+              </span>
+              <span className="px-3 py-1 rounded-full bg-white/80 border border-rose-200/80 shadow-sm">
+                🌍 12+ стран мира
+              </span>
+              <span className="px-3 py-1 rounded-full bg-white/80 border border-rose-200/80 shadow-sm">
+                ⚡ 1080p HD Качество
+              </span>
+            </div>
+          </section>
+        )}
 
         {/* Delicate Openwork Lace Divider */}
         <div className="text-center text-xs font-script text-rose-400 my-2 select-none">
@@ -238,7 +265,7 @@ export default function App() {
               <ChannelCard
                 key={channel.id}
                 channel={channel}
-                isSelected={selectedChannel.id === channel.id}
+                isSelected={selectedChannel?.id === channel.id}
                 isFavorite={favorites.includes(channel.id)}
                 onSelect={() => {
                   setSelectedChannel(channel);

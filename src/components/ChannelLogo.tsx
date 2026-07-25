@@ -8,11 +8,12 @@ interface Props {
   className?: string;
 }
 
-export const ChannelLogo: React.FC<Props> = ({ logo, name, countryCode = 'US', className = 'w-12 h-12' }) => {
+export const ChannelLogo: React.FC<Props> = ({ logo, name, countryCode = 'RU', className = 'w-12 h-12' }) => {
   const [hasError, setHasError] = useState(false);
 
-  // Generate short initials (e.g., "Disney Channel" -> "DC", "Cartoon Network" -> "CN")
+  // Generate short initials
   const initials = name
+    .replace(/[^a-zA-Zа-яА-Я0-9\s]/g, '')
     .split(' ')
     .map(word => word[0])
     .filter(Boolean)
@@ -20,13 +21,22 @@ export const ChannelLogo: React.FC<Props> = ({ logo, name, countryCode = 'US', c
     .join('')
     .toUpperCase();
 
-  if (hasError || !logo) {
+  const isFlagLogo = !logo || logo.includes('flagcdn.com');
+
+  if (hasError || isFlagLogo) {
     return (
-      <div className={`relative flex items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white font-bold font-soft shadow-inner overflow-hidden p-1 shrink-0 ${className}`}>
+      <div className={`relative flex items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-rose-600 text-white font-bold font-soft shadow-inner overflow-hidden p-1 shrink-0 ${className}`}>
         <div className="flex flex-col items-center justify-center text-center">
           <Tv className="w-3.5 h-3.5 opacity-90 mb-0.5" />
           <span className="text-[10px] tracking-tight leading-none font-bold uppercase">{initials || 'TV'}</span>
         </div>
+        {countryCode && (
+          <img 
+            src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`} 
+            alt={countryCode}
+            className="absolute bottom-0.5 right-0.5 w-3.5 h-2.5 rounded-[2px] shadow-sm object-cover border border-white/60"
+          />
+        )}
       </div>
     );
   }
@@ -43,3 +53,4 @@ export const ChannelLogo: React.FC<Props> = ({ logo, name, countryCode = 'US', c
     </div>
   );
 };
+

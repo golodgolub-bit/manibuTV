@@ -2,10 +2,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import { 
   Volume2, VolumeX, Maximize2, Minimize2, 
-  Subtitles, Radio, RefreshCw, Tv, Wifi, Zap, ChevronDown, Check
+  Radio, RefreshCw, Tv, Wifi, Zap, ChevronDown, Check
 } from 'lucide-react';
 import { Channel, StreamQuality } from '../types';
-import { SubtitlesOverlay } from './SubtitlesOverlay';
 
 interface Props {
   channel: Channel;
@@ -29,8 +28,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   const [isDataSaver, setIsDataSaver] = useState<boolean>(false);
   const hlsRef = useRef<Hls | null>(null);
 
-  // Subtitles & Player mode
-  const [isSubtitlesEnabled, setIsSubtitlesEnabled] = useState<boolean>(false);
+  // Player mode
   const [currentMirror, setCurrentMirror] = useState<'primary' | 'backup' | 'embed'>('primary');
   const [isIframeMode, setIsIframeMode] = useState<boolean>(channel.streamType === 'iframe' || false);
 
@@ -343,12 +341,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         />
       )}
 
-      <SubtitlesOverlay
-        channelName={channel.name}
-        isEnabled={isSubtitlesEnabled}
-        onToggleEnabled={() => setIsSubtitlesEnabled(!isSubtitlesEnabled)}
-      />
-
       {/* Loading Indicator */}
       {isLoading && !hasError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm text-white">
@@ -421,20 +413,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
 
           {/* Right Controls */}
           <div className="flex items-center gap-2 relative">
-
-            {/* Subtitles Toggle */}
-            <button
-              onClick={() => setIsSubtitlesEnabled(!isSubtitlesEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-soft border transition-all ${
-                isSubtitlesEnabled
-                  ? 'bg-rose-500 text-white border-rose-400 font-bold shadow-md'
-                  : 'bg-white/70 hover:bg-white text-rose-950 border-white/80'
-              }`}
-              title="Субтитры"
-            >
-              <Subtitles className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Субтитры</span>
-            </button>
 
             {/* Quality Selector Control */}
             <div className="relative">

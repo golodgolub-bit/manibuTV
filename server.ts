@@ -56,7 +56,55 @@ const categoryMap: Record<string, string> = {
   travel: "lifestyle"
 };
 
+let logoByNameMap: Record<string, string> = {};
+let logoMapLoaded = false;
+
+async function loadLogoMap() {
+  if (logoMapLoaded && Object.keys(logoByNameMap).length > 0) return;
+  try {
+    const [channelsRes, logosRes] = await Promise.all([
+      fetch("https://iptv-org.github.io/api/channels.json"),
+      fetch("https://iptv-org.github.io/api/logos.json")
+    ]);
+    if (channelsRes.ok && logosRes.ok) {
+      const channels = await channelsRes.json();
+      const logos = await logosRes.json();
+      const logoByChannelId: Record<string, string> = {};
+      
+      for (const l of logos) {
+        if (l.channel && l.url && !logoByChannelId[l.channel]) {
+          logoByChannelId[l.channel] = l.url;
+        }
+      }
+
+      for (const c of channels) {
+        const logoUrl = logoByChannelId[c.id];
+        if (logoUrl) {
+          const norm = c.name.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
+          if (!logoByNameMap[norm]) logoByNameMap[norm] = logoUrl;
+          
+          const clean = c.name.toLowerCase().replace(/\b(hd|sd|live|tv|онлайн|канал)\b/gi, "").replace(/[^a-z0-9а-яё]/gi, "");
+          if (clean && !logoByNameMap[clean]) logoByNameMap[clean] = logoUrl;
+
+          if (c.alt_names && Array.isArray(c.alt_names)) {
+            for (const alt of c.alt_names) {
+              const normAlt = alt.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
+              if (!logoByNameMap[normAlt]) logoByNameMap[normAlt] = logoUrl;
+            }
+          }
+        }
+      }
+      logoMapLoaded = true;
+      console.log(`[Logo Map] Loaded ${Object.keys(logoByNameMap).length} channel logo mappings.`);
+    }
+  } catch (e) {
+    console.warn("Failed to load iptv-org logos map:", e);
+  }
+}
+
 async function loadFamelackChannelsFromSource() {
+  await loadLogoMap();
+
   const targetCountries = ["ru", "us", "fr", "de", "es", "tr", "ua", "kz", "gb", "jp", "ca", "it"];
   const categoriesList = ["news", "movies", "music", "sports", "kids", "documentary", "entertainment"];
 
@@ -98,16 +146,22 @@ async function loadFamelackChannelsFromSource() {
         const rawCat = categoryMapByNanoid[item.nanoid] || "general";
         const mappedCategory = categoryMap[rawCat] || "entertainment";
 
+        const normName = item.name.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
+        const cleanName = item.name.toLowerCase().replace(/\b(hd|sd|live|tv|онлайн|канал)\b/gi, "").replace(/[^a-z0-9а-яё]/gi, "");
+        const countryCodeUpper = (item.country || cc).toUpperCase();
+
+        const matchedLogo = logoByNameMap[normName] || logoByNameMap[cleanName] || `https://flagcdn.com/w160/${countryCodeUpper.toLowerCase()}.png`;
+
         allChannels.push({
           id: "famelack-" + item.nanoid,
           name: item.name,
-          logo: `https://raw.githubusercontent.com/iptv-org/iptv/master/logos/${item.nanoid}.png`,
+          logo: matchedLogo,
           url: item.sources.streams[0],
           backupUrl: item.sources.streams[1] || "",
           embedUrl: "",
           category: mappedCategory,
-          countryCode: (item.country || cc).toUpperCase(),
-          countryName: countryNames[cc] || (item.country || cc).toUpperCase(),
+          countryCode: countryCodeUpper,
+          countryName: countryNames[cc] || countryCodeUpper,
           language: item.languages ? item.languages.join(", ") : "Русский / English",
           isHD: true,
           quality: "1080p",

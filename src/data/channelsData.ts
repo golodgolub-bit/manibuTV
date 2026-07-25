@@ -36,7 +36,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-3ABN-RU',
     name: '3ABN Russia',
-    logo: 'https://flagcdn.com/w160/ru.png',
+    logo: 'https://i.imgur.com/uGzZ54H.png',
     url: 'https://3abn.bozztv.com/3abn2/Rus_live/smil:Rus_live.smil/playlist.m3u8',
     backupUrl: 'https://hls.tv.3angels.ru/stream.m3u8',
     embedUrl: '',
@@ -53,7 +53,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-360-RU',
     name: '360° Новости HD',
-    logo: 'https://flagcdn.com/w160/ru.png',
+    logo: 'https://i.imgur.com/VTJqdoX.png',
     url: 'https://live-vgtrksmotrim.cdnvideo.ru/vgtrksmotrim/smotrim-live-04-srt.smil/playlist.m3u8',
     backupUrl: 'https://live-vgtrksmotrim.cdnvideo.ru/vgtrksmotrim/smotrim-live-03-srt.smil/playlist.m3u8',
     embedUrl: '',
@@ -70,7 +70,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-360news-RU',
     name: '360° News Live',
-    logo: 'https://flagcdn.com/w160/ru.png',
+    logo: 'https://i.imgur.com/VTJqdoX.png',
     url: 'https://live-vgtrksmotrim.cdnvideo.ru/vgtrksmotrim/smotrim-live-03-srt.smil/playlist.m3u8',
     backupUrl: 'https://live2-aisttv.cdnvideo.ru/aisttv2/aisttv.sdp/playlist.m3u8',
     embedUrl: '',
@@ -87,7 +87,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-sitv86-RU',
     name: 'СургутИнформТВ (СИТВ 86)',
-    logo: 'https://flagcdn.com/w160/ru.png',
+    logo: 'https://sitv.ru/images/logo.png',
     url: 'https://sitv.ru/hls/s86.m3u8',
     backupUrl: '',
     embedUrl: '',
@@ -104,7 +104,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-15music-RU',
     name: '15+ Music TV',
-    logo: 'https://flagcdn.com/w160/ru.png',
+    logo: 'https://i.imgur.com/7oNe8xj.png',
     url: 'https://live.15plusmg.ru/memfs/ce3366b1-bf25-4e24-96bb-1adf0d44bd3d.m3u8',
     backupUrl: '',
     embedUrl: '',
@@ -121,7 +121,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-20min-FR',
     name: '20 Minutes TV Paris',
-    logo: 'https://flagcdn.com/w160/fr.png',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/20_minutes_logo.svg',
     url: 'https://live-20minutestv.digiteka.com/1961167769/index.m3u8',
     backupUrl: '',
     embedUrl: '',
@@ -138,7 +138,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-africa24-FR',
     name: 'Africa 24 Live',
-    logo: 'https://flagcdn.com/w160/fr.png',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/2/23/Africa24_logo.png',
     url: 'https://africa24.vedge.infomaniak.com/livecast/ik:africa24/manifest.m3u8',
     backupUrl: '',
     embedUrl: '',
@@ -155,7 +155,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-alexberlin-DE',
     name: 'Alex Berlin TV',
-    logo: 'https://flagcdn.com/w160/de.png',
+    logo: 'https://i.imgur.com/K3G2sY8.png',
     url: 'https://alex-stream.rosebud-media.de/bounce/alexlive.smil/playlist.m3u8',
     backupUrl: '',
     embedUrl: '',
@@ -172,7 +172,7 @@ export const INITIAL_CHANNELS: Channel[] = [
   {
     id: 'famelack-ardalpha-DE',
     name: 'ARD-alpha Германия',
-    logo: 'https://flagcdn.com/w160/de.png',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/13/ARD_alpha_logo.svg',
     url: 'https://mcdn.br.de/br/fs/ard_alpha/hls/de/master.m3u8',
     backupUrl: '',
     embedUrl: '',
@@ -224,17 +224,28 @@ export const INITIAL_CHANNELS: Channel[] = [
 
 export async function fetchIPTVOrgChannels(): Promise<Channel[]> {
   try {
-    const [channelsRes, streamsRes] = await Promise.all([
+    const [channelsRes, streamsRes, logosRes] = await Promise.all([
       fetch('https://iptv-org.github.io/api/channels.json'),
-      fetch('https://iptv-org.github.io/api/streams.json')
+      fetch('https://iptv-org.github.io/api/streams.json'),
+      fetch('https://iptv-org.github.io/api/logos.json')
     ]);
 
     if (!channelsRes.ok || !streamsRes.ok) return [];
 
     const channelsMeta = await channelsRes.json();
     const streamsMeta = await streamsRes.json();
+    const logosMeta = logosRes.ok ? await logosRes.json() : [];
 
     if (!Array.isArray(channelsMeta) || !Array.isArray(streamsMeta)) return [];
+
+    const logoMap = new Map<string, string>();
+    if (Array.isArray(logosMeta)) {
+      for (const l of logosMeta) {
+        if (l.channel && l.url && !logoMap.has(l.channel)) {
+          logoMap.set(l.channel, l.url);
+        }
+      }
+    }
 
     const channelStreamMap = new Map<string, string>();
     for (const stream of streamsMeta) {
@@ -252,7 +263,7 @@ export async function fetchIPTVOrgChannels(): Promise<Channel[]> {
       if (!streamUrl) continue;
 
       const countryCode = (ch.country || 'US').toUpperCase();
-      const logoUrl = ch.logo || `https://flagcdn.com/w160/${countryCode.toLowerCase()}.png`;
+      const logoUrl = logoMap.get(ch.id) || ch.logo || `https://flagcdn.com/w160/${countryCode.toLowerCase()}.png`;
 
       const rawCategories = Array.isArray(ch.categories) ? ch.categories.join(' ').toLowerCase() : '';
       let category = 'entertainment';

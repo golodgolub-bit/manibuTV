@@ -301,8 +301,19 @@ app.get("/api/proxy-hls", async (req, res) => {
       return res.send(rewrittenLines.join("\n"));
     } else {
       if (contentType) res.setHeader("Content-Type", contentType);
-      const arrayBuffer = await response.arrayBuffer();
-      return res.send(Buffer.from(arrayBuffer));
+      res.setHeader("Cache-Control", "public, max-age=600");
+      if (response.headers.get("content-length")) {
+        res.setHeader("Content-Length", response.headers.get("content-length")!);
+      }
+      
+      if (response.body) {
+        const { Readable } = await import("stream");
+        // Stream chunk bytes directly to client without loading entire segment into RAM
+        return Readable.fromWeb(response.body as any).pipe(res);
+      } else {
+        const arrayBuffer = await response.arrayBuffer();
+        return res.send(Buffer.from(arrayBuffer));
+      }
     }
   } catch (error: any) {
     console.error("Proxy HLS error:", error?.message || error);

@@ -111,12 +111,22 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 60,
-        maxBufferLength: isDataSaver ? 10 : 30,
-        manifestLoadingTimeOut: 10000,
-        manifestLoadingMaxRetry: 2,
-        levelLoadingTimeOut: 10000,
-        fragLoadingTimeOut: 12000,
+        backBufferLength: 30,
+        maxBufferLength: isDataSaver ? 6 : 12,
+        maxMaxBufferLength: isDataSaver ? 12 : 24,
+        maxBufferSize: 30 * 1024 * 1024,
+        maxBufferHole: 0.5,
+        highBufferWatchdogPeriod: 2,
+        nudgeOffset: 0.1,
+        nudgeMaxRetry: 5,
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        manifestLoadingTimeOut: 12000,
+        manifestLoadingMaxRetry: 4,
+        levelLoadingTimeOut: 12000,
+        levelLoadingMaxRetry: 4,
+        fragLoadingTimeOut: 15000,
+        fragLoadingMaxRetry: 6,
       });
 
       hlsRef.current = hls;
@@ -144,13 +154,22 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         }
       });
 
+      let netErrorCount = 0;
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
+              netErrorCount++;
+              if (netErrorCount <= 3) {
+                console.warn(`[manibuTV] Network glitch detected (${netErrorCount}/3), reconnecting...`);
+                hls.startLoad();
+              } else {
+                handleSilentFailover();
+                hls.destroy();
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
+              console.warn('[manibuTV] Media decoding error, attempting recovery...');
               hls.recoverMediaError();
               break;
             default:
@@ -176,10 +195,17 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
 
     const handleWaiting = () => {
       setIsLoading(true);
+      if (hlsRef.current) {
+        hlsRef.current.startLoad();
+      }
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
       stallTimeoutRef.current = setTimeout(() => {
-        handleSilentFailover();
-      }, 8000);
+        if (videoRef.current && videoRef.current.paused) {
+          videoRef.current.play().catch(() => {});
+        } else {
+          handleSilentFailover();
+        }
+      }, 12000);
     };
 
     const handlePlaying = () => {

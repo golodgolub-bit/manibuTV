@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, Globe2, Heart, ShieldCheck, Cookie } from 'lucide-react';
 import { Channel } from '../types';
 import { getTimezoneDetails } from '../utils/time';
+import { ChannelLogo } from './ChannelLogo';
 
 interface Props {
   channel: Channel;
@@ -31,13 +32,11 @@ export const ChannelDetailsBar: React.FC<Props> = ({
         {/* Channel Info & Flag */}
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
-            <img 
-              src={channel.logo} 
-              alt={channel.name} 
-              className="w-16 h-16 md:w-20 md:h-20 object-contain rounded-2xl p-2 bg-white/80 border border-white shadow-md"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
+            <ChannelLogo
+              logo={channel.logo}
+              name={channel.name}
+              countryCode={channel.countryCode}
+              className="w-16 h-16 md:w-20 md:h-20"
             />
             <span className="absolute -bottom-1 -right-1 text-2xl drop-shadow-sm">
               {getCountryFlag(channel.countryCode)}

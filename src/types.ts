@@ -2,7 +2,10 @@ export interface Channel {
   id: string;
   name: string;
   logo: string;
-  url: string; // m3u8 stream URL
+  url: string; // m3u8 stream URL or primary video
+  embedUrl?: string; // YouTube / Iframe live broadcast fallback
+  backupUrl?: string; // Backup m3u8 / MP4 stream
+  streamType?: 'hls' | 'iframe' | 'mp4';
   category: string;
   countryCode: string; // e.g. "RU", "US", "FR", "JP", "GB", "DE"
   countryName: string;

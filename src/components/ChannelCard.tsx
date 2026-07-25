@@ -1,6 +1,7 @@
 import React from 'react';
 import { Heart, Play } from 'lucide-react';
 import { Channel } from '../types';
+import { ChannelLogo } from './ChannelLogo';
 
 interface Props {
   channel: Channel;
@@ -52,17 +53,14 @@ export const ChannelCard: React.FC<Props> = React.memo(({
 
       {/* Channel Logo and Name */}
       <div className="flex items-center gap-3.5 my-2">
-        <div className="relative w-12 h-12 rounded-2xl bg-white/90 p-1.5 border border-white shadow-inner flex items-center justify-center shrink-0 overflow-hidden">
-          <img
-            src={channel.logo}
-            alt={channel.name}
-            loading="lazy"
-            className="w-full h-full object-contain"
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = 'none';
-            }}
+        <div className="relative shrink-0">
+          <ChannelLogo
+            logo={channel.logo}
+            name={channel.name}
+            countryCode={channel.countryCode}
+            className="w-12 h-12"
           />
-          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-rose-800 opacity-0 group-hover:opacity-100 transition-opacity bg-rose-100/95 backdrop-blur-xs">
+          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-rose-800 opacity-0 group-hover:opacity-100 transition-opacity bg-rose-100/90 backdrop-blur-xs rounded-2xl">
             <Play className="w-4 h-4 fill-rose-600 text-rose-600" />
           </div>
         </div>

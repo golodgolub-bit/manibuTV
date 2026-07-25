@@ -30,11 +30,46 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   const [isDataSaver, setIsDataSaver] = useState<boolean>(false);
   const hlsRef = useRef<Hls | null>(null);
 
-  // Subtitles state
+  // Subtitles & Mirror state
   const [isSubtitlesEnabled, setIsSubtitlesEnabled] = useState<boolean>(false);
+  const [currentMirror, setCurrentMirror] = useState<'primary' | 'backup' | 'embed'>('primary');
+  const [isIframeMode, setIsIframeMode] = useState<boolean>(channel.streamType === 'iframe' || false);
+  const [isMirrorMenuOpen, setIsMirrorMenuOpen] = useState<boolean>(false);
+
+  // Helper to format embed URLs (YouTube or general iframe)
+  const getEmbedUrl = (ch: Channel) => {
+    const target = ch.embedUrl || ch.url;
+    if (target.includes('youtube.com') || target.includes('youtu.be')) {
+      let videoId = '';
+      if (target.includes('v=')) {
+        videoId = target.split('v=')[1]?.split('&')[0] || '';
+      } else if (target.includes('youtu.be/')) {
+        videoId = target.split('youtu.be/')[1]?.split('?')[0] || '';
+      } else if (target.includes('/embed/')) {
+        videoId = target.split('/embed/')[1]?.split('?')[0] || '';
+      }
+      if (videoId) {
+        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&enablejsapi=1&controls=1`;
+      }
+    }
+    return target;
+  };
+
+  // Reset states on channel change
+  useEffect(() => {
+    setCurrentMirror('primary');
+    setIsIframeMode(channel.streamType === 'iframe' || false);
+  }, [channel.id, channel.streamType]);
 
   // Load HLS Stream
   useEffect(() => {
+    if (isIframeMode || currentMirror === 'embed') {
+      setIsIframeMode(true);
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -48,6 +83,8 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       hlsRef.current = null;
     }
 
+    const streamUrl = (currentMirror === 'backup' && channel.backupUrl) ? channel.backupUrl : channel.url;
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
@@ -58,7 +95,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
 
       hlsRef.current = hls;
 
-      hls.loadSource(channel.url);
+      hls.loadSource(streamUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
@@ -91,26 +128,52 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
               hls.recoverMediaError();
               break;
             default:
-              setHasError(true);
-              setIsLoading(false);
+              // Automatic mirror failover sequence
+              if (currentMirror === 'primary' && channel.backupUrl) {
+                console.log('Primary mirror failed, trying backup mirror...');
+                setCurrentMirror('backup');
+              } else if (channel.embedUrl) {
+                console.log('HLS streams failed, switching to web mirror player...');
+                setCurrentMirror('embed');
+                setIsIframeMode(true);
+                setIsLoading(false);
+                setHasError(false);
+              } else {
+                setHasError(true);
+                setIsLoading(false);
+              }
               hls.destroy();
               break;
           }
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = channel.url;
+      video.src = streamUrl;
       video.addEventListener('loadedmetadata', () => {
         setIsLoading(false);
         video.play().then(() => setIsPlaying(true)).catch(() => {});
       });
       video.addEventListener('error', () => {
-        setHasError(true);
-        setIsLoading(false);
+        if (currentMirror === 'primary' && channel.backupUrl) {
+          setCurrentMirror('backup');
+        } else if (channel.embedUrl) {
+          setCurrentMirror('embed');
+          setIsIframeMode(true);
+          setIsLoading(false);
+        } else {
+          setHasError(true);
+          setIsLoading(false);
+        }
       });
     } else {
-      setHasError(true);
-      setIsLoading(false);
+      if (channel.embedUrl) {
+        setCurrentMirror('embed');
+        setIsIframeMode(true);
+        setIsLoading(false);
+      } else {
+        setHasError(true);
+        setIsLoading(false);
+      }
     }
 
     return () => {
@@ -119,7 +182,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         hlsRef.current = null;
       }
     };
-  }, [channel.url, isDataSaver]);
+  }, [channel.url, channel.backupUrl, channel.embedUrl, isDataSaver, isIframeMode, currentMirror]);
 
   const changeQuality = (index: number) => {
     setSelectedQualityIndex(index);
@@ -243,12 +306,23 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         </div>
       </div>
 
-      <video
-        ref={videoRef}
-        className="w-full h-full object-contain relative z-10 cursor-pointer"
-        playsInline
-        onClick={togglePlay}
-      />
+      {/* Video element or Iframe player */}
+      {isIframeMode ? (
+        <iframe
+          src={getEmbedUrl(channel)}
+          title={channel.name}
+          className="w-full h-full border-0 relative z-10"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          className="w-full h-full object-contain relative z-10 cursor-pointer"
+          playsInline
+          onClick={togglePlay}
+        />
+      )}
 
       <SubtitlesOverlay
         channelName={channel.name}
@@ -279,13 +353,23 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
           <p className="text-xs text-rose-300/80 max-w-md mt-1 mb-4 leading-relaxed font-sans-ui">
             Прямой эфир "{channel.name}" временно обновляет CDN трансляцию. Вы можете переподключиться или выбрать другой из {channel.countryName}!
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={reloadStream}
-              className="px-4 py-2 rounded-2xl glass-pill bg-rose-500/40 hover:bg-rose-500/60 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg"
+              className="px-4 py-2 rounded-2xl glass-pill bg-rose-500/40 hover:bg-rose-500/60 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Переподключиться
+            </button>
+            <button
+              onClick={() => {
+                setIsIframeMode(true);
+                setHasError(false);
+              }}
+              className="px-4 py-2 rounded-2xl glass-pill bg-white/20 hover:bg-white/30 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg cursor-pointer"
+            >
+              <Tv className="w-3.5 h-3.5 text-rose-300" />
+              Включить Плеер-Зеркало (YouTube Live)
             </button>
           </div>
         </div>
@@ -337,6 +421,92 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
           {/* Right Controls */}
           <div className="flex items-center gap-2 relative">
             
+            {/* Mirror Selector Control */}
+            <div className="relative">
+              <button
+                onClick={() => setIsMirrorMenuOpen(!isMirrorMenuOpen)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-soft font-semibold border transition-all ${
+                  currentMirror === 'primary'
+                    ? 'bg-white/80 hover:bg-white text-rose-950 border-white/90'
+                    : 'bg-rose-500 text-white border-rose-400 shadow-md'
+                }`}
+                title="Переключить источник / зеркало канала"
+              >
+                <Tv className="w-3.5 h-3.5 text-rose-600" />
+                <span>
+                  {currentMirror === 'primary'
+                    ? 'Зеркало 1'
+                    : currentMirror === 'backup'
+                    ? 'Зеркало 2 (CDN)'
+                    : 'Зеркало 3 (Web)'}
+                </span>
+                <ChevronDown className="w-3 h-3 opacity-70" />
+              </button>
+
+              {/* Mirror Selector Popup */}
+              {isMirrorMenuOpen && (
+                <div className="absolute right-0 bottom-12 w-64 rounded-2xl glass-card backdrop-blur-2xl border border-white/90 shadow-2xl p-2 z-50 text-rose-950">
+                  <div className="text-[11px] font-soft font-bold text-rose-900/80 px-2 py-1 uppercase tracking-wider border-b border-rose-100/60 mb-1 flex items-center justify-between">
+                    <span>Источники и Зеркала</span>
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setCurrentMirror('primary');
+                      setIsIframeMode(false);
+                      setIsMirrorMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-soft transition-colors cursor-pointer ${
+                      currentMirror === 'primary' && !isIframeMode ? 'bg-rose-500 text-white font-bold' : 'hover:bg-rose-100/60'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-semibold">Зеркало 1 (Основной CDN)</div>
+                      <div className="text-[10px] opacity-80">Ультра-низкая задержка, HD 1080p</div>
+                    </div>
+                    {currentMirror === 'primary' && !isIframeMode && <Check className="w-3.5 h-3.5 shrink-0" />}
+                  </button>
+
+                  {channel.backupUrl && (
+                    <button
+                      onClick={() => {
+                        setCurrentMirror('backup');
+                        setIsIframeMode(false);
+                        setIsMirrorMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-soft transition-colors cursor-pointer mt-1 ${
+                        currentMirror === 'backup' && !isIframeMode ? 'bg-rose-500 text-white font-bold' : 'hover:bg-rose-100/60'
+                      }`}
+                    >
+                      <div className="text-left">
+                        <div className="font-semibold">Зеркало 2 (Резервный CDN)</div>
+                        <div className="text-[10px] opacity-80">Обход гео-блокировок и провайдеров</div>
+                      </div>
+                      {currentMirror === 'backup' && !isIframeMode && <Check className="w-3.5 h-3.5 shrink-0" />}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setCurrentMirror('embed');
+                      setIsIframeMode(true);
+                      setIsMirrorMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-soft transition-colors cursor-pointer mt-1 ${
+                      isIframeMode ? 'bg-rose-500 text-white font-bold' : 'hover:bg-rose-100/60'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-semibold">Зеркало 3 (YouTube / Web Live)</div>
+                      <div className="text-[10px] opacity-80">Работает 100% везде и на любых устройствах</div>
+                    </div>
+                    {isIframeMode && <Check className="w-3.5 h-3.5 shrink-0" />}
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Subtitles Toggle */}
             <button
               onClick={() => setIsSubtitlesEnabled(!isSubtitlesEnabled)}

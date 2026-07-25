@@ -111,7 +111,7 @@ async function loadFamelackChannelsFromSource() {
           language: item.languages ? item.languages.join(", ") : "Русский / English",
           isHD: true,
           quality: "1080p",
-          description: `Официальная прямая трансляция канала ${item.name} от Famelack TV.`
+          description: `Официальная прямая трансляция канала ${item.name} в высоком качестве.`
         });
       }
     } catch (e) {

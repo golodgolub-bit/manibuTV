@@ -21,7 +21,7 @@ export async function fetchFamelackChannels(): Promise<Channel[]> {
         language: ch.language || 'Русский / English',
         isHD: true,
         quality: '1080p',
-        description: ch.description || `Официальный эфир ${ch.name} от Famelack TV.`
+        description: ch.description || `Официальный эфир ${ch.name}.`
       }));
     }
     return [];
@@ -48,7 +48,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Русский',
     isHD: true,
     quality: '1080p',
-    description: 'Прямой эфир русского вещательного телеканала от Famelack TV.'
+    description: 'Прямой эфир русского вещательного телеканала.'
   },
   {
     id: 'famelack-360-RU',
@@ -116,7 +116,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Русский',
     isHD: true,
     quality: '1080p',
-    description: 'Современные музыкальные клипы и хиты в прямом эфире Famelack.'
+    description: 'Современные музыкальные клипы и хиты в прямом эфире.'
   },
   {
     id: 'famelack-20min-FR',
@@ -133,7 +133,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Français',
     isHD: true,
     quality: '1080p',
-    description: 'Французское новостное и развлекательное телевидение от Famelack TV.'
+    description: 'Французское новостное и развлекательное телевидение.'
   },
   {
     id: 'famelack-africa24-FR',

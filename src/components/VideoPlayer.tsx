@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import { 
-  Play, Pause, Volume2, VolumeX, Maximize2, Minimize2, 
-  Subtitles, Radio, RefreshCw, Tv, Wifi, Zap, ChevronDown, Check, ShieldCheck
+  Volume2, VolumeX, Maximize2, Minimize2, 
+  Subtitles, Radio, RefreshCw, Tv, Wifi, Zap, ChevronDown, Check
 } from 'lucide-react';
 import { Channel, StreamQuality } from '../types';
 import { SubtitlesOverlay } from './SubtitlesOverlay';
@@ -15,7 +15,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [volume, setVolume] = useState<number>(0.8);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -30,16 +29,15 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   const [isDataSaver, setIsDataSaver] = useState<boolean>(false);
   const hlsRef = useRef<Hls | null>(null);
 
-  // Subtitles & Mirror state
+  // Subtitles & Player mode
   const [isSubtitlesEnabled, setIsSubtitlesEnabled] = useState<boolean>(false);
   const [currentMirror, setCurrentMirror] = useState<'primary' | 'backup' | 'embed'>('primary');
   const [isIframeMode, setIsIframeMode] = useState<boolean>(channel.streamType === 'iframe' || false);
-  const [isMirrorMenuOpen, setIsMirrorMenuOpen] = useState<boolean>(false);
 
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const stallTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Helper to format embed URLs (only if channel explicitly defines an embedUrl or youtube url)
+  // Helper to format embed URLs
   const getEmbedUrl = (ch: Channel) => {
     const target = ch.embedUrl || ch.url;
     if (target.includes('youtube.com') || target.includes('youtu.be')) {
@@ -65,20 +63,20 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
     setHasError(false);
   }, [channel.id, channel.streamType]);
 
-  // Failover logic to try backup URLs or show honest error state
+  // Silent failover logic
   const handleSilentFailover = useCallback(() => {
     if (currentMirror === 'primary' && channel.backupUrl) {
-      console.log('[manibuTV Famelack] Primary CDN stream unavailable, trying backup stream...');
+      console.log('[manibuTV] Primary stream unavailable, trying backup stream...');
       setCurrentMirror('backup');
       setIsIframeMode(false);
     } else if (currentMirror !== 'embed' && channel.embedUrl) {
-      console.log('[manibuTV Famelack] CDN stream unavailable, trying web embed URL...');
+      console.log('[manibuTV] Stream unavailable, trying web live embed URL...');
       setCurrentMirror('embed');
       setIsIframeMode(true);
       setIsLoading(false);
       setHasError(false);
     } else {
-      console.log('[manibuTV Famelack] Stream offline or blocked by provider.');
+      console.log('[manibuTV] Live stream offline.');
       setIsLoading(false);
       setHasError(true);
     }
@@ -131,10 +129,10 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
         setIsLoading(false);
         setHasError(false);
-        video.play().then(() => setIsPlaying(true)).catch(() => {
+        video.play().catch(() => {
           video.muted = true;
           setIsMuted(true);
-          video.play().then(() => setIsPlaying(true)).catch(() => {});
+          video.play().catch(() => {});
         });
 
         if (data.levels && data.levels.length > 0) {
@@ -152,11 +150,9 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.log('[HLS Network Error] Retrying loading...');
               hls.startLoad();
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.log('[HLS Media Error] Recovering media...');
               hls.recoverMediaError();
               break;
             default:
@@ -171,7 +167,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       video.addEventListener('loadedmetadata', () => {
         setIsLoading(false);
         setHasError(false);
-        video.play().then(() => setIsPlaying(true)).catch(() => {});
+        video.play().catch(() => {});
       });
       video.addEventListener('error', () => {
         handleSilentFailover();
@@ -180,12 +176,10 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       handleSilentFailover();
     }
 
-    // Monitor playback stalling / buffer empty events
     const handleWaiting = () => {
       setIsLoading(true);
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
       stallTimeoutRef.current = setTimeout(() => {
-        console.log('[manibuTV] Broadcast stalled for >8s, attempting failover...');
         handleSilentFailover();
       }, 8000);
     };
@@ -252,8 +246,9 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       if (e.key === 'f' || e.key === 'F') {
         toggleFullscreen();
       } else if (e.key === ' ') {
+        // Prevent space key from pausing live video
         e.preventDefault();
-        togglePlay();
+        videoRef.current?.play().catch(() => {});
       } else if (e.key === 'm' || e.key === 'M') {
         toggleMute();
       }
@@ -267,17 +262,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (isPlaying) {
-      video.pause();
-      setIsPlaying(false);
-    } else {
-      video.play().then(() => setIsPlaying(true)).catch(() => {});
-    }
-  };
 
   const toggleMute = () => {
     const video = videoRef.current;
@@ -349,9 +333,13 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       ) : (
         <video
           ref={videoRef}
-          className="w-full h-full object-contain relative z-10 cursor-pointer"
+          className="w-full h-full object-contain relative z-10 cursor-default"
           playsInline
-          onClick={togglePlay}
+          onPause={() => {
+            // Live broadcast cannot be paused
+            videoRef.current?.play().catch(() => {});
+          }}
+          onContextMenu={(e) => e.preventDefault()}
         />
       )}
 
@@ -379,10 +367,10 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
             <Tv className="w-8 h-8" />
           </div>
           <h3 className="text-xl font-bold font-soft text-rose-100">
-            Сигнал временной недоступен
+            Сигнал временно недоступен
           </h3>
           <p className="text-xs text-rose-300/80 max-w-md mt-1 mb-4 leading-relaxed font-sans-ui">
-            Прямой эфир "{channel.name}" временно обновляет CDN трансляцию. Вы можете переподключиться или выбрать другой из {channel.countryName}!
+            Прямой эфир "{channel.name}" временно обновляет трансляцию. Вы можете переподключиться или выбрать другой канал!
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
@@ -392,32 +380,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
               <RefreshCw className="w-3.5 h-3.5" />
               Переподключиться
             </button>
-            {channel.backupUrl && currentMirror !== 'backup' && (
-              <button
-                onClick={() => {
-                  setCurrentMirror('backup');
-                  setIsIframeMode(false);
-                  setHasError(false);
-                }}
-                className="px-4 py-2 rounded-2xl glass-pill bg-white/20 hover:bg-white/30 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg cursor-pointer"
-              >
-                <Tv className="w-3.5 h-3.5 text-rose-300" />
-                Переключить на Резервный CDN
-              </button>
-            )}
-            {channel.embedUrl && (
-              <button
-                onClick={() => {
-                  setCurrentMirror('embed');
-                  setIsIframeMode(true);
-                  setHasError(false);
-                }}
-                className="px-4 py-2 rounded-2xl glass-pill bg-white/20 hover:bg-white/30 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg cursor-pointer"
-              >
-                <Tv className="w-3.5 h-3.5 text-rose-300" />
-                Официальный веб-плеер
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -425,20 +387,17 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       {/* Player Controls */}
       <div 
         className={`absolute bottom-0 inset-x-0 z-30 p-4 md:p-6 transition-opacity duration-300 ${
-          isControlsVisible || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         <div className="w-full max-w-4xl mx-auto px-4 py-2.5 rounded-3xl glass-card backdrop-blur-2xl border border-white/80 shadow-2xl flex items-center justify-between text-rose-950">
           
-          {/* Left Controls */}
+          {/* Left Controls: Live indicator + Volume */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={togglePlay}
-              className="p-2.5 rounded-2xl bg-white/80 hover:bg-white text-rose-950 border border-white shadow-sm transition-transform active:scale-95"
-              title={isPlaying ? 'Пауза (Пробел)' : 'Воспроизвести (Пробел)'}
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-rose-800" />}
-            </button>
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold text-xs shadow-sm font-soft">
+              <Radio className="w-3.5 h-3.5 animate-pulse" />
+              <span>Прямой эфир</span>
+            </div>
 
             <div className="flex items-center gap-2">
               <button
@@ -458,101 +417,10 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
                 className="w-16 md:w-24 h-1.5 bg-rose-200/80 accent-rose-500 rounded-lg cursor-pointer"
               />
             </div>
-
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100/80 border border-white text-rose-950 text-xs font-soft font-semibold">
-              <Radio className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
-              <span>ПРЯМОЙ ЭФИР</span>
-            </div>
           </div>
 
           {/* Right Controls */}
           <div className="flex items-center gap-2 relative">
-            
-            {/* Mirror Selector Control */}
-            <div className="relative">
-              <button
-                onClick={() => setIsMirrorMenuOpen(!isMirrorMenuOpen)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-soft font-semibold border transition-all ${
-                  currentMirror === 'primary'
-                    ? 'bg-white/80 hover:bg-white text-rose-950 border-white/90'
-                    : 'bg-rose-500 text-white border-rose-400 shadow-md'
-                }`}
-                title="Переключить источник / зеркало канала"
-              >
-                <Tv className="w-3.5 h-3.5 text-rose-600" />
-                <span>
-                  {currentMirror === 'primary'
-                    ? 'Зеркало 1'
-                    : currentMirror === 'backup'
-                    ? 'Зеркало 2 (CDN)'
-                    : 'Зеркало 3 (Web)'}
-                </span>
-                <ChevronDown className="w-3 h-3 opacity-70" />
-              </button>
-
-              {/* Mirror Selector Popup */}
-              {isMirrorMenuOpen && (
-                <div className="absolute right-0 bottom-12 w-64 rounded-2xl glass-card backdrop-blur-2xl border border-white/90 shadow-2xl p-2 z-50 text-rose-950">
-                  <div className="text-[11px] font-soft font-bold text-rose-900/80 px-2 py-1 uppercase tracking-wider border-b border-rose-100/60 mb-1 flex items-center justify-between">
-                    <span>Источники и Зеркала</span>
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setCurrentMirror('primary');
-                      setIsIframeMode(false);
-                      setIsMirrorMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-soft transition-colors cursor-pointer ${
-                      currentMirror === 'primary' && !isIframeMode ? 'bg-rose-500 text-white font-bold' : 'hover:bg-rose-100/60'
-                    }`}
-                  >
-                    <div className="text-left">
-                      <div className="font-semibold">Зеркало 1 (Основной CDN)</div>
-                      <div className="text-[10px] opacity-80">Ультра-низкая задержка, HD 1080p</div>
-                    </div>
-                    {currentMirror === 'primary' && !isIframeMode && <Check className="w-3.5 h-3.5 shrink-0" />}
-                  </button>
-
-                  {channel.backupUrl && (
-                    <button
-                      onClick={() => {
-                        setCurrentMirror('backup');
-                        setIsIframeMode(false);
-                        setIsMirrorMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-soft transition-colors cursor-pointer mt-1 ${
-                        currentMirror === 'backup' && !isIframeMode ? 'bg-rose-500 text-white font-bold' : 'hover:bg-rose-100/60'
-                      }`}
-                    >
-                      <div className="text-left">
-                        <div className="font-semibold">Зеркало 2 (Резервный CDN)</div>
-                        <div className="text-[10px] opacity-80">Обход гео-блокировок и провайдеров</div>
-                      </div>
-                      {currentMirror === 'backup' && !isIframeMode && <Check className="w-3.5 h-3.5 shrink-0" />}
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      setCurrentMirror('embed');
-                      setIsIframeMode(true);
-                      setIsMirrorMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-soft transition-colors cursor-pointer mt-1 ${
-                      isIframeMode ? 'bg-rose-500 text-white font-bold' : 'hover:bg-rose-100/60'
-                    }`}
-                  >
-                    <div className="text-left">
-                      <div className="font-semibold">Зеркало 3 (YouTube / Web Live)</div>
-                      <div className="text-[10px] opacity-80">Работает 100% везде и на любых устройствах</div>
-                    </div>
-                    {isIframeMode && <Check className="w-3.5 h-3.5 shrink-0" />}
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Subtitles Toggle */}
             <button

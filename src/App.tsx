@@ -175,6 +175,26 @@ export default function App() {
     return counts;
   }, [channels]);
 
+  const availableCountriesList = useMemo(() => {
+    const map = new Map<string, { code: string; name: string; flag: string; count: number }>();
+    for (let i = 0; i < channels.length; i++) {
+      const c = channels[i];
+      if (!c.countryCode) continue;
+      const cc = c.countryCode.toUpperCase();
+      if (!map.has(cc)) {
+        const flag = cc.length === 2 ? String.fromCodePoint(...[...cc].map(char => 127397 + char.charCodeAt(0))) : '🌍';
+        map.set(cc, {
+          code: cc,
+          name: c.countryName || cc,
+          flag,
+          count: 0
+        });
+      }
+      map.get(cc)!.count++;
+    }
+    return Array.from(map.values());
+  }, [channels]);
+
   const getCategoryCount = useCallback((catId: string) => categoryCounts[catId] || 0, [categoryCounts]);
   const getCountryCount = useCallback((code: string) => countryCounts[code] || 0, [countryCounts]);
 
@@ -239,7 +259,7 @@ export default function App() {
                 📺 {channels.length}+ телеканалов
               </span>
               <span className="px-3 py-1 rounded-full bg-white/80 border border-rose-200/80 shadow-sm">
-                🌍 12+ стран мира
+                🌍 {availableCountriesList.length || 160}+ стран мира
               </span>
               <span className="px-3 py-1 rounded-full bg-white/80 border border-rose-200/80 shadow-sm">
                 ⚡ 1080p HD Качество
@@ -265,6 +285,7 @@ export default function App() {
             selectedCountry={selectedCountry}
             onSelectCountry={setSelectedCountry}
             getCountryCount={getCountryCount}
+            availableCountries={availableCountriesList}
           />
         </section>
 

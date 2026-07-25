@@ -102,10 +102,24 @@ async function loadLogoMap() {
   }
 }
 
+const regionNamesRu = new Intl.DisplayNames(['ru'], { type: 'region' });
+
+function getCountryNameRu(code: string): string {
+  const c = code.toLowerCase();
+  if (countryNames[c]) return countryNames[c];
+  try {
+    return regionNamesRu.of(code.toUpperCase()) || code.toUpperCase();
+  } catch (e) {
+    return code.toUpperCase();
+  }
+}
+
 async function loadFamelackChannelsFromSource() {
   await loadLogoMap();
 
-  const targetCountries = ["ru", "us", "fr", "de", "es", "tr", "ua", "kz", "gb", "jp", "ca", "it", "br", "in", "pl", "ge", "am", "cn", "kr", "ae", "nl", "se", "au", "mx", "ar", "cl", "co", "at", "ch"];
+  const targetCountries = [
+    "ad","ae","af","ag","al","am","ao","ar","at","au","aw","az","ba","bd","be","bf","bg","bh","bj","bo","bq","br","bs","by","bz","ca","cd","cg","ch","ci","cl","cm","cn","co","cr","cu","cw","cy","cz","de","dj","dk","do","dz","ec","ee","eg","er","es","et","fi","fo","fr","ge","gf","gh","gl","gm","gn","gp","gr","gt","gu","gy","hk","hn","hr","ht","hu","id","ie","il","in","iq","ir","is","it","jm","jo","jp","ke","kh","kn","kr","kw","kz","la","lb","lc","lk","lt","lu","lv","ly","ma","mc","md","me","mk","ml","mm","mn","mo","mq","mt","mv","mx","my","mz","ne","ng","ni","nl","no","np","nz","om","pa","pe","pg","ph","pk","pl","pr","ps","pt","py","qa","ro","rs","ru","rw","sa","sd","se","sg","si","sk","sl","sn","sr","sv","sx","sy","td","tg","th","tj","tn","tr","tt","tw","tz","ua","ug","uk","us","uy","uz","ve","vg","vn","xk","ye","za","zw"
+  ];
   const categoriesList = ["news", "movies", "music", "sports", "kids", "documentary", "entertainment"];
 
   const categoryMapByNanoid: Record<string, string> = {};
@@ -131,51 +145,55 @@ async function loadFamelackChannelsFromSource() {
   const allChannels: any[] = [];
   const seenIds = new Set<string>();
 
-  for (const cc of targetCountries) {
-    try {
-      const res = await fetch(`https://raw.githubusercontent.com/famelack/famelack-data/main/tv/compressed/countries/${cc}.json`);
-      if (!res.ok) continue;
-      const buf = await res.arrayBuffer();
-      const raw = JSON.parse(zlib.gunzipSync(Buffer.from(buf)).toString());
+  const chunkSize = 20;
+  for (let i = 0; i < targetCountries.length; i += chunkSize) {
+    const chunk = targetCountries.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (cc) => {
+      try {
+        const res = await fetch(`https://raw.githubusercontent.com/famelack/famelack-data/main/tv/compressed/countries/${cc}.json`);
+        if (!res.ok) return;
+        const buf = await res.arrayBuffer();
+        const raw = JSON.parse(zlib.gunzipSync(Buffer.from(buf)).toString());
 
-      for (const item of raw) {
-        if (!item.sources || !item.sources.streams || item.sources.streams.length === 0) continue;
-        if (seenIds.has(item.nanoid)) continue;
-        seenIds.add(item.nanoid);
+        for (const item of raw) {
+          if (!item.sources || !item.sources.streams || item.sources.streams.length === 0) continue;
+          if (seenIds.has(item.nanoid)) continue;
+          seenIds.add(item.nanoid);
 
-        const rawCat = categoryMapByNanoid[item.nanoid] || "general";
-        const mappedCategory = categoryMap[rawCat] || "entertainment";
+          const rawCat = categoryMapByNanoid[item.nanoid] || "general";
+          const mappedCategory = categoryMap[rawCat] || "entertainment";
 
-        const normName = item.name.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
-        const cleanName = item.name.toLowerCase().replace(/\b(hd|sd|live|tv|онлайн|канал)\b/gi, "").replace(/[^a-z0-9а-яё]/gi, "");
-        const countryCodeUpper = (item.country || cc).toUpperCase();
+          const normName = item.name.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
+          const cleanName = item.name.toLowerCase().replace(/\b(hd|sd|live|tv|онлайн|канал)\b/gi, "").replace(/[^a-z0-9а-яё]/gi, "");
+          const countryCodeUpper = (item.country || cc).toUpperCase();
 
-        const matchedLogo = logoByNameMap[normName] || logoByNameMap[cleanName] || `https://flagcdn.com/w160/${countryCodeUpper.toLowerCase()}.png`;
+          const matchedLogo = logoByNameMap[normName] || logoByNameMap[cleanName] || `https://flagcdn.com/w160/${countryCodeUpper.toLowerCase()}.png`;
 
-        allChannels.push({
-          id: "famelack-" + item.nanoid,
-          name: item.name,
-          logo: matchedLogo,
-          url: item.sources.streams[0],
-          backupUrl: item.sources.streams[1] || "",
-          embedUrl: "",
-          category: mappedCategory,
-          countryCode: countryCodeUpper,
-          countryName: countryNames[cc] || countryCodeUpper,
-          language: item.languages ? item.languages.join(", ") : "Русский / English",
-          isHD: true,
-          quality: "1080p",
-          description: `Официальная прямая трансляция канала ${item.name} в высоком качестве.`
-        });
+          allChannels.push({
+            id: "famelack-" + item.nanoid,
+            name: item.name,
+            logo: matchedLogo,
+            url: item.sources.streams[0],
+            backupUrl: item.sources.streams[1] || "",
+            embedUrl: "",
+            category: mappedCategory,
+            countryCode: countryCodeUpper,
+            countryName: getCountryNameRu(countryCodeUpper),
+            language: item.languages ? item.languages.join(", ") : "Русский / English",
+            isHD: true,
+            quality: "1080p",
+            description: `Официальная прямая трансляция канала ${item.name} в высоком качестве.`
+          });
+        }
+      } catch (e) {
+        // Ignore single country error
       }
-    } catch (e) {
-      console.error(`Failed to load famelack channels for ${cc}:`, e);
-    }
+    }));
   }
 
   cachedFamelackChannels = allChannels;
   lastCacheTime = Date.now();
-  console.log(`[Famelack TV API] Loaded ${allChannels.length} live channels from Famelack database.`);
+  console.log(`[Famelack TV API] Loaded ${allChannels.length} live channels from Famelack database across ${targetCountries.length} countries.`);
   return allChannels;
 }
 
@@ -202,7 +220,7 @@ app.get("/api/famelack/channels", async (req, res) => {
       filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || c.countryName.toLowerCase().includes(q));
     }
 
-    const maxLimit = limit ? parseInt(limit as string, 10) : 500;
+    const maxLimit = limit ? parseInt(limit as string, 10) : 10000;
     res.json({
       total: filtered.length,
       channels: filtered.slice(0, maxLimit)

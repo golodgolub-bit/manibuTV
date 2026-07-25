@@ -2,7 +2,7 @@ import { Channel } from '../types';
 
 export async function fetchFamelackChannels(): Promise<Channel[]> {
   try {
-    const res = await fetch('/api/famelack/channels?limit=1000');
+    const res = await fetch('/api/famelack/channels?limit=10000');
     if (!res.ok) return [];
     const data = await res.json();
     if (data && Array.isArray(data.channels)) {

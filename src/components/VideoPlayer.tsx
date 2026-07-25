@@ -39,7 +39,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const stallTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Helper to format embed URLs (YouTube or general iframe)
+  // Helper to format embed URLs (only if channel explicitly defines an embedUrl or youtube url)
   const getEmbedUrl = (ch: Channel) => {
     const target = ch.embedUrl || ch.url;
     if (target.includes('youtube.com') || target.includes('youtu.be')) {
@@ -61,24 +61,24 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   // Reset states on channel change
   useEffect(() => {
     setCurrentMirror('primary');
-    setIsIframeMode(channel.streamType === 'iframe' || false);
+    setIsIframeMode(channel.streamType === 'iframe');
     setHasError(false);
   }, [channel.id, channel.streamType]);
 
-  // Failover logic to try backup URLs or show transparent error
+  // Failover logic to try backup URLs or show honest error state
   const handleSilentFailover = useCallback(() => {
     if (currentMirror === 'primary' && channel.backupUrl) {
-      console.log('[manibuTV] Primary stream unavailable, trying backup URL...');
+      console.log('[manibuTV Famelack] Primary CDN stream unavailable, trying backup stream...');
       setCurrentMirror('backup');
       setIsIframeMode(false);
     } else if (currentMirror !== 'embed' && channel.embedUrl) {
-      console.log('[manibuTV] CDN stream unavailable, trying official web live player...');
+      console.log('[manibuTV Famelack] CDN stream unavailable, trying web embed URL...');
       setCurrentMirror('embed');
       setIsIframeMode(true);
       setIsLoading(false);
       setHasError(false);
     } else {
-      console.log('[manibuTV] All mirrors failed for this channel.');
+      console.log('[manibuTV Famelack] Stream offline or blocked by provider.');
       setIsLoading(false);
       setHasError(true);
     }

@@ -5,7 +5,7 @@ import { CountryFilter } from './components/CountryFilter';
 import { ChannelCard } from './components/ChannelCard';
 import { VideoPlayer } from './components/VideoPlayer';
 import { ChannelDetailsBar } from './components/ChannelDetailsBar';
-import { INITIAL_CHANNELS, fetchIPTVOrgChannels } from './data/channelsData';
+import { INITIAL_CHANNELS, fetchIPTVOrgChannels, fetchFamelackChannels } from './data/channelsData';
 import { Channel } from './types';
 import { RefreshCw, Radio, Sparkles, MessageCircle, Heart } from 'lucide-react';
 
@@ -43,10 +43,19 @@ export default function App() {
     }
   }, [favorites]);
 
-  // Load extra IPTV-org channels in background
+  // Load extra Famelack channels in background
   useEffect(() => {
     async function loadExtendedChannels() {
       setIsLoadingMoreChannels(true);
+      const famelackChannels = await fetchFamelackChannels();
+      if (famelackChannels.length > 0) {
+        setChannels((prev) => {
+          const existingIds = new Set(prev.map((c) => c.id));
+          const uniqueNew = famelackChannels.filter((c) => !existingIds.has(c.id));
+          return [...prev, ...uniqueNew];
+        });
+      }
+
       const extraChannels = await fetchIPTVOrgChannels();
       if (extraChannels.length > 0) {
         setChannels((prev) => {

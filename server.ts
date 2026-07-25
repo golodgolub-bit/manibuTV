@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import zlib from "zlib";
 import { createServer as createViteServer } from "vite";
 
 const app = express();
@@ -9,7 +10,152 @@ app.use(express.json());
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "manibuTV" });
+  res.json({ status: "ok", service: "manibuTV", dataset: "famelack" });
+});
+
+// Cache for Famelack TV Channels
+let cachedFamelackChannels: any[] = [];
+let lastCacheTime = 0;
+const CACHE_TTL = 3600000; // 1 hour
+
+const countryNames: Record<string, string> = {
+  ru: "Россия",
+  us: "США",
+  fr: "Франция",
+  de: "Германия",
+  es: "Испания",
+  tr: "Турция",
+  ua: "Украина",
+  kz: "Казахстан",
+  gb: "Великобритания",
+  jp: "Япония",
+  ca: "Канада",
+  it: "Италия",
+  ae: "ОАЭ",
+  br: "Бразилия",
+  cn: "Китай"
+};
+
+const categoryMap: Record<string, string> = {
+  news: "news",
+  "top-news": "news",
+  movies: "movies",
+  series: "movies",
+  music: "music",
+  sports: "sports",
+  kids: "kids",
+  animation: "kids",
+  documentary: "documentary",
+  science: "documentary",
+  entertainment: "entertainment",
+  comedy: "entertainment",
+  show: "entertainment",
+  lifestyle: "lifestyle",
+  cooking: "lifestyle",
+  auto: "sports",
+  travel: "lifestyle"
+};
+
+async function loadFamelackChannelsFromSource() {
+  const targetCountries = ["ru", "us", "fr", "de", "es", "tr", "ua", "kz", "gb", "jp", "ca", "it"];
+  const categoriesList = ["news", "movies", "music", "sports", "kids", "documentary", "entertainment"];
+
+  const categoryMapByNanoid: Record<string, string> = {};
+
+  // Build category index
+  for (const cat of categoriesList) {
+    try {
+      const res = await fetch(`https://raw.githubusercontent.com/famelack/famelack-data/main/tv/compressed/categories/${cat}.json`);
+      if (res.ok) {
+        const buf = await res.arrayBuffer();
+        const raw = JSON.parse(zlib.gunzipSync(Buffer.from(buf)).toString());
+        for (const item of raw) {
+          if (item.nanoid && !categoryMapByNanoid[item.nanoid]) {
+            categoryMapByNanoid[item.nanoid] = cat;
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore category fetch error
+    }
+  }
+
+  const allChannels: any[] = [];
+  const seenIds = new Set<string>();
+
+  for (const cc of targetCountries) {
+    try {
+      const res = await fetch(`https://raw.githubusercontent.com/famelack/famelack-data/main/tv/compressed/countries/${cc}.json`);
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      const raw = JSON.parse(zlib.gunzipSync(Buffer.from(buf)).toString());
+
+      for (const item of raw) {
+        if (!item.sources || !item.sources.streams || item.sources.streams.length === 0) continue;
+        if (seenIds.has(item.nanoid)) continue;
+        seenIds.add(item.nanoid);
+
+        const rawCat = categoryMapByNanoid[item.nanoid] || "general";
+        const mappedCategory = categoryMap[rawCat] || "entertainment";
+
+        allChannels.push({
+          id: "famelack-" + item.nanoid,
+          name: item.name,
+          logo: `https://raw.githubusercontent.com/iptv-org/iptv/master/logos/${item.nanoid}.png`,
+          url: item.sources.streams[0],
+          backupUrl: item.sources.streams[1] || "",
+          embedUrl: "",
+          category: mappedCategory,
+          countryCode: (item.country || cc).toUpperCase(),
+          countryName: countryNames[cc] || (item.country || cc).toUpperCase(),
+          language: item.languages ? item.languages.join(", ") : "Русский / English",
+          isHD: true,
+          quality: "1080p",
+          description: `Официальная прямая трансляция канала ${item.name} от Famelack TV.`
+        });
+      }
+    } catch (e) {
+      console.error(`Failed to load famelack channels for ${cc}:`, e);
+    }
+  }
+
+  cachedFamelackChannels = allChannels;
+  lastCacheTime = Date.now();
+  console.log(`[Famelack TV API] Loaded ${allChannels.length} live channels from Famelack database.`);
+  return allChannels;
+}
+
+// Famelack Channels API Endpoint
+app.get("/api/famelack/channels", async (req, res) => {
+  try {
+    if (!cachedFamelackChannels.length || Date.now() - lastCacheTime > CACHE_TTL) {
+      await loadFamelackChannelsFromSource();
+    }
+
+    const { country, category, search, limit } = req.query;
+    let filtered = [...cachedFamelackChannels];
+
+    if (country && typeof country === "string" && country !== "ALL") {
+      filtered = filtered.filter(c => c.countryCode.toLowerCase() === country.toLowerCase());
+    }
+
+    if (category && typeof category === "string" && category !== "all") {
+      filtered = filtered.filter(c => c.category.toLowerCase() === category.toLowerCase());
+    }
+
+    if (search && typeof search === "string") {
+      const q = search.toLowerCase().trim();
+      filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || c.countryName.toLowerCase().includes(q));
+    }
+
+    const maxLimit = limit ? parseInt(limit as string, 10) : 500;
+    res.json({
+      total: filtered.length,
+      channels: filtered.slice(0, maxLimit)
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: "Failed to fetch Famelack channels: " + error.message });
+  }
 });
 
 // Server-side CORS & HLS Proxy for 100% reliable TV broadcast streaming

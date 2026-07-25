@@ -11,7 +11,7 @@ interface Props {
   onGoHome?: () => void;
 }
 
-export const Navbar: React.FC<Props> = ({
+export const Navbar: React.FC<Props> = React.memo(({
   searchQuery,
   onSearchChange,
   favoritesCount,
@@ -122,4 +122,4 @@ export const Navbar: React.FC<Props> = ({
       </div>
     </header>
   );
-};
+});

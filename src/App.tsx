@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useDeferredValue } from 'react';
 import { Navbar } from './components/Navbar';
 import { CategoryBar } from './components/CategoryBar';
 import { CountryFilter } from './components/CountryFilter';
@@ -7,7 +7,7 @@ import { VideoPlayer } from './components/VideoPlayer';
 import { ChannelDetailsBar } from './components/ChannelDetailsBar';
 import { INITIAL_CHANNELS, fetchIPTVOrgChannels, fetchFamelackChannels } from './data/channelsData';
 import { Channel } from './types';
-import { RefreshCw, Radio, Sparkles, MessageCircle, Tv } from 'lucide-react';
+import { RefreshCw, Radio, Sparkles, MessageCircle, Tv, ChevronDown } from 'lucide-react';
 
 export default function App() {
   const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
@@ -18,6 +18,12 @@ export default function App() {
   const [selectedCountry, setSelectedCountry] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isFavoritesOnly, setIsFavoritesOnly] = useState<boolean>(false);
+
+  // Pagination / Batch Rendering State (limits active DOM nodes to 48 for 60fps performance)
+  const [visibleCount, setVisibleCount] = useState<number>(48);
+
+  // Deferred Search Query for 60fps typing without layout jank
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   // Toast Notification state for Favorites action
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -70,12 +76,12 @@ export default function App() {
     loadExtendedChannels();
   }, []);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
     }, 2800);
-  };
+  }, []);
 
   // Toggle Favorite callback
   const toggleFavorite = useCallback((channelId: string, e?: React.MouseEvent) => {
@@ -96,10 +102,12 @@ export default function App() {
 
       return updated;
     });
-  }, [channels]);
+  }, [channels, showToast]);
 
   // Filter channels logic with Memoization
   const filteredChannels = useMemo(() => {
+    const q = deferredSearchQuery.trim().toLowerCase();
+
     return channels.filter((channel) => {
       if (selectedCategory !== 'ALL' && channel.category !== selectedCategory) {
         return false;
@@ -113,8 +121,7 @@ export default function App() {
         return false;
       }
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      if (q) {
         const matchesName = channel.name.toLowerCase().includes(q);
         const matchesCountry = channel.countryName.toLowerCase().includes(q) || channel.countryCode.toLowerCase().includes(q);
         const matchesCity = channel.city.toLowerCase().includes(q);
@@ -128,7 +135,17 @@ export default function App() {
 
       return true;
     });
-  }, [channels, selectedCategory, selectedCountry, isFavoritesOnly, favorites, searchQuery]);
+  }, [channels, selectedCategory, selectedCountry, isFavoritesOnly, favorites, deferredSearchQuery]);
+
+  // Reset pagination count back to 48 when filters change
+  useEffect(() => {
+    setVisibleCount(48);
+  }, [selectedCategory, selectedCountry, deferredSearchQuery, isFavoritesOnly]);
+
+  // Displayed channels slice for instant DOM rendering
+  const displayedChannels = useMemo(() => {
+    return filteredChannels.slice(0, visibleCount);
+  }, [filteredChannels, visibleCount]);
 
   // Auto-switch selected channel if filtered channel list updates in favorites mode
   useEffect(() => {
@@ -139,15 +156,27 @@ export default function App() {
     }
   }, [isFavoritesOnly, filteredChannels, favorites, selectedChannel]);
 
-  const getCategoryCount = useCallback((catId: string) => {
-    if (catId === 'ALL') return channels.length;
-    return channels.filter((c) => c.category === catId).length;
+  // Precomputed O(1) category and country count maps
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: channels.length };
+    for (let i = 0; i < channels.length; i++) {
+      const cat = channels[i].category;
+      counts[cat] = (counts[cat] || 0) + 1;
+    }
+    return counts;
   }, [channels]);
 
-  const getCountryCount = useCallback((code: string) => {
-    if (code === 'ALL') return channels.length;
-    return channels.filter((c) => c.countryCode === code).length;
+  const countryCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: channels.length };
+    for (let i = 0; i < channels.length; i++) {
+      const cc = channels[i].countryCode;
+      counts[cc] = (counts[cc] || 0) + 1;
+    }
+    return counts;
   }, [channels]);
+
+  const getCategoryCount = useCallback((catId: string) => categoryCounts[catId] || 0, [categoryCounts]);
+  const getCountryCount = useCallback((code: string) => countryCounts[code] || 0, [countryCounts]);
 
   const handleGoHome = useCallback(() => {
     setSelectedChannel(null);
@@ -268,21 +297,42 @@ export default function App() {
         </div>
 
         {/* Channel Cards Grid */}
-        {filteredChannels.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredChannels.map((channel) => (
-              <ChannelCard
-                key={channel.id}
-                channel={channel}
-                isSelected={selectedChannel?.id === channel.id}
-                isFavorite={favorites.includes(channel.id)}
-                onSelect={() => {
-                  setSelectedChannel(channel);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                onToggleFavorite={(e) => toggleFavorite(channel.id, e)}
-              />
-            ))}
+        {displayedChannels.length > 0 ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {displayedChannels.map((channel) => (
+                <ChannelCard
+                  key={channel.id}
+                  channel={channel}
+                  isSelected={selectedChannel?.id === channel.id}
+                  isFavorite={favorites.includes(channel.id)}
+                  onSelect={() => {
+                    setSelectedChannel(channel);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  onToggleFavorite={(e) => toggleFavorite(channel.id, e)}
+                />
+              ))}
+            </div>
+
+            {/* Load More Batch Control */}
+            {filteredChannels.length > visibleCount && (
+              <div className="flex flex-col items-center justify-center pt-4 pb-2 gap-2">
+                <button
+                  onClick={() => setVisibleCount((prev) => prev + 48)}
+                  className="px-6 py-3 rounded-2xl bg-white hover:bg-rose-50 text-rose-950 border border-rose-300/80 shadow-md font-bold font-soft text-xs transition-all active:scale-95 flex items-center gap-2 hover:border-rose-400 cursor-pointer"
+                >
+                  <ChevronDown className="w-4 h-4 text-rose-500" />
+                  <span>Показать ещё 48 каналов</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-200/80 text-rose-900 font-bold">
+                    +{filteredChannels.length - visibleCount}
+                  </span>
+                </button>
+                <p className="text-[11px] text-rose-800/70 font-sans-ui">
+                  Показано {displayedChannels.length} из {filteredChannels.length} каналов
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-12 text-center glass-card rounded-3xl border border-white/80 my-8">

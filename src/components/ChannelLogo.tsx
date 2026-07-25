@@ -8,7 +8,7 @@ interface Props {
   className?: string;
 }
 
-export const ChannelLogo: React.FC<Props> = ({ logo, name, countryCode = 'RU', className = 'w-12 h-12' }) => {
+export const ChannelLogo: React.FC<Props> = React.memo(({ logo, name, countryCode = 'RU', className = 'w-12 h-12' }) => {
   const [hasError, setHasError] = useState(false);
 
   // Generate short initials
@@ -34,6 +34,8 @@ export const ChannelLogo: React.FC<Props> = ({ logo, name, countryCode = 'RU', c
           <img 
             src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`} 
             alt={countryCode}
+            loading="lazy"
+            decoding="async"
             className="absolute bottom-0.5 right-0.5 w-3.5 h-2.5 rounded-[2px] shadow-sm object-cover border border-white/60"
           />
         )}
@@ -47,10 +49,11 @@ export const ChannelLogo: React.FC<Props> = ({ logo, name, countryCode = 'RU', c
         src={logo}
         alt={name}
         loading="lazy"
+        decoding="async"
         className="w-full h-full object-contain"
         onError={() => setHasError(true)}
       />
     </div>
   );
-};
+});
 

@@ -8,7 +8,7 @@ interface Props {
   getCountryCount: (code: string) => number;
 }
 
-export const CountryFilter: React.FC<Props> = ({
+export const CountryFilter: React.FC<Props> = React.memo(({
   selectedCountry,
   onSelectCountry,
   getCountryCount
@@ -53,4 +53,4 @@ export const CountryFilter: React.FC<Props> = ({
       </div>
     </div>
   );
-};
+});

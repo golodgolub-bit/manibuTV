@@ -29,7 +29,7 @@ export const ChannelCard: React.FC<Props> = React.memo(({
     >
       {/* Top badges: Flag & Category & Favorite button */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-2xl bg-white/70 backdrop-blur-md border border-white text-xs font-soft text-rose-950 shadow-sm">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-2xl bg-white/90 border border-white text-xs font-soft text-rose-950 shadow-sm">
           <span className="text-sm">{getCountryFlag(channel.countryCode)}</span>
           <span className="font-semibold">{channel.countryCode}</span>
         </div>
@@ -60,7 +60,7 @@ export const ChannelCard: React.FC<Props> = React.memo(({
             countryCode={channel.countryCode}
             className="w-12 h-12"
           />
-          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-rose-800 opacity-0 group-hover:opacity-100 transition-opacity bg-rose-100/90 backdrop-blur-xs rounded-2xl">
+          <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-rose-800 opacity-0 group-hover:opacity-100 transition-opacity bg-rose-100/90 rounded-2xl">
             <Play className="w-4 h-4 fill-rose-600 text-rose-600" />
           </div>
         </div>
@@ -77,8 +77,8 @@ export const ChannelCard: React.FC<Props> = React.memo(({
 
       {/* Bottom live indicator */}
       <div className="mt-3 pt-2.5 border-t border-rose-200/50 flex items-center justify-between text-[10px] font-soft text-rose-700">
-        <span className="flex items-center gap-1 font-semibold text-emerald-700">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+        <span className="flex items-center gap-1.5 font-semibold text-emerald-700">
+          <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
           В ЭФИРЕ
         </span>
         <span className="text-rose-500/80 font-medium text-[11px]">

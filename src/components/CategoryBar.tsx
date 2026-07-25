@@ -7,7 +7,7 @@ interface Props {
   getCategoryCount: (catId: string) => number;
 }
 
-export const CategoryBar: React.FC<Props> = ({
+export const CategoryBar: React.FC<Props> = React.memo(({
   selectedCategory,
   onSelectCategory,
   getCategoryCount
@@ -42,4 +42,4 @@ export const CategoryBar: React.FC<Props> = ({
       </div>
     </div>
   );
-};
+});

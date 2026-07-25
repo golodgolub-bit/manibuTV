@@ -20,27 +20,41 @@ app.get("/api/proxy-hls", async (req, res) => {
   }
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch(targetUrl, {
+      signal: controller.signal,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "*/*",
+        "Referer": new URL(targetUrl).origin + "/",
       },
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       return res.status(response.status).send(`Stream fetch failed: ${response.statusText}`);
     }
 
+    const finalUrl = response.url || targetUrl;
     const contentType = response.headers.get("content-type") || "";
 
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 
-    if (targetUrl.includes(".m3u8") || contentType.includes("mpegurl") || contentType.includes("apple") || contentType.includes("text")) {
+    if (
+      targetUrl.includes(".m3u8") ||
+      contentType.includes("mpegurl") ||
+      contentType.includes("apple") ||
+      contentType.includes("text")
+    ) {
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
       const text = await response.text();
-      const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf("/") + 1);
+      const baseUrl = finalUrl.substring(0, finalUrl.lastIndexOf("/") + 1);
 
       const lines = text.split("\n");
       const rewrittenLines = lines.map((line) => {
@@ -48,14 +62,22 @@ app.get("/api/proxy-hls", async (req, res) => {
         if (!trimmed || trimmed.startsWith("#")) {
           if (trimmed.includes('URI="')) {
             return trimmed.replace(/URI="([^"]+)"/g, (_, p1) => {
-              const full = p1.startsWith("http") ? p1 : new URL(p1, baseUrl).href;
-              return `URI="/api/proxy-hls?url=${encodeURIComponent(full)}"`;
+              try {
+                const full = p1.startsWith("http") ? p1 : new URL(p1, baseUrl).href;
+                return `URI="/api/proxy-hls?url=${encodeURIComponent(full)}"`;
+              } catch {
+                return `URI="${p1}"`;
+              }
             });
           }
           return line;
         }
-        const absoluteUrl = trimmed.startsWith("http") ? trimmed : new URL(trimmed, baseUrl).href;
-        return `/api/proxy-hls?url=${encodeURIComponent(absoluteUrl)}`;
+        try {
+          const absoluteUrl = trimmed.startsWith("http") ? trimmed : new URL(trimmed, baseUrl).href;
+          return `/api/proxy-hls?url=${encodeURIComponent(absoluteUrl)}`;
+        } catch {
+          return line;
+        }
       });
 
       return res.send(rewrittenLines.join("\n"));
@@ -65,8 +87,8 @@ app.get("/api/proxy-hls", async (req, res) => {
       return res.send(Buffer.from(arrayBuffer));
     }
   } catch (error: any) {
-    console.error("Proxy HLS error:", error);
-    return res.status(500).send("Proxy error: " + error.message);
+    console.error("Proxy HLS error:", error?.message || error);
+    return res.status(500).send("Proxy error: " + (error?.message || "Stream timeout"));
   }
 });
 

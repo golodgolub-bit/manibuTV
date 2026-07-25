@@ -55,8 +55,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&enablejsapi=1&controls=1&modestbranding=1`;
       }
     }
-    // Authentic 24/7 Euronews / France 24 Live news fallback
-    return `https://www.youtube-nocookie.com/embed/gCNeDWCI010?autoplay=1&mute=0&enablejsapi=1&controls=1&modestbranding=1`;
+    return target;
   };
 
   // Reset states on channel change
@@ -66,28 +65,26 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
     setHasError(false);
   }, [channel.id, channel.streamType]);
 
-  // Silent automatic failover logic to cycle mirrors
+  // Failover logic to try backup URLs or show transparent error
   const handleSilentFailover = useCallback(() => {
     if (currentMirror === 'primary' && channel.backupUrl) {
-      console.log('[manibuTV Silent Auto-Recovery] Switching to Backup CDN Mirror...');
+      console.log('[manibuTV] Primary stream unavailable, trying backup URL...');
       setCurrentMirror('backup');
       setIsIframeMode(false);
     } else if (currentMirror !== 'embed' && channel.embedUrl) {
-      console.log('[manibuTV Silent Auto-Recovery] Switching to Web Live Mirror...');
+      console.log('[manibuTV] CDN stream unavailable, trying official web live player...');
       setCurrentMirror('embed');
       setIsIframeMode(true);
       setIsLoading(false);
       setHasError(false);
     } else {
-      // If all fail or no embed, force web embed mode with fallback live stream
-      console.log('[manibuTV Silent Auto-Recovery] Activating Web Live Player Engine...');
-      setIsIframeMode(true);
+      console.log('[manibuTV] All mirrors failed for this channel.');
       setIsLoading(false);
-      setHasError(false);
+      setHasError(true);
     }
   }, [currentMirror, channel.backupUrl, channel.embedUrl]);
 
-  // Load HLS Stream with automatic silent monitoring
+  // Load HLS Stream
   useEffect(() => {
     if (isIframeMode || currentMirror === 'embed') {
       setIsIframeMode(true);
@@ -109,16 +106,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       hlsRef.current = null;
     }
 
-    // 2.5s Watchdog: If stream doesn't parse manifest within 2500ms, auto switch mirror instantly
-    const watchdogTimer = setTimeout(() => {
-      console.log('[manibuTV Watchdog] Stream response timeout (>2.5s). Silent failover triggered.');
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-      handleSilentFailover();
-    }, 2500);
-
     const rawStreamUrl = (currentMirror === 'backup' && channel.backupUrl) ? channel.backupUrl : channel.url;
     const streamUrl = (rawStreamUrl && rawStreamUrl.startsWith('http'))
       ? `/api/proxy-hls?url=${encodeURIComponent(rawStreamUrl)}`
@@ -130,10 +117,10 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         lowLatencyMode: true,
         backBufferLength: 60,
         maxBufferLength: isDataSaver ? 10 : 30,
-        manifestLoadingTimeOut: 3000,
-        manifestLoadingMaxRetry: 1,
-        levelLoadingTimeOut: 3000,
-        fragLoadingTimeOut: 3000,
+        manifestLoadingTimeOut: 10000,
+        manifestLoadingMaxRetry: 2,
+        levelLoadingTimeOut: 10000,
+        fragLoadingTimeOut: 12000,
       });
 
       hlsRef.current = hls;
@@ -142,7 +129,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-        clearTimeout(watchdogTimer);
         setIsLoading(false);
         setHasError(false);
         video.play().then(() => setIsPlaying(true)).catch(() => {
@@ -164,26 +150,33 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          clearTimeout(watchdogTimer);
-          // Silent instant failover without infinite looping
-          handleSilentFailover();
-          hls.destroy();
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log('[HLS Network Error] Retrying loading...');
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log('[HLS Media Error] Recovering media...');
+              hls.recoverMediaError();
+              break;
+            default:
+              handleSilentFailover();
+              hls.destroy();
+              break;
+          }
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = streamUrl;
       video.addEventListener('loadedmetadata', () => {
-        clearTimeout(watchdogTimer);
         setIsLoading(false);
         setHasError(false);
         video.play().then(() => setIsPlaying(true)).catch(() => {});
       });
       video.addEventListener('error', () => {
-        clearTimeout(watchdogTimer);
         handleSilentFailover();
       });
     } else {
-      clearTimeout(watchdogTimer);
       handleSilentFailover();
     }
 
@@ -191,15 +184,13 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
     const handleWaiting = () => {
       setIsLoading(true);
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
-      // If stalled for > 2.5 seconds, silently attempt failover mirror
       stallTimeoutRef.current = setTimeout(() => {
-        console.log('[manibuTV] Broadcast stalled, silently recovering...');
+        console.log('[manibuTV] Broadcast stalled for >8s, attempting failover...');
         handleSilentFailover();
-      }, 2500);
+      }, 8000);
     };
 
     const handlePlaying = () => {
-      clearTimeout(watchdogTimer);
       setIsLoading(false);
       setHasError(false);
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
@@ -210,7 +201,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
     video.addEventListener('playing', handlePlaying);
 
     return () => {
-      clearTimeout(watchdogTimer);
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('stalled', handleWaiting);
       video.removeEventListener('playing', handlePlaying);
@@ -402,16 +392,32 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
               <RefreshCw className="w-3.5 h-3.5" />
               Переподключиться
             </button>
-            <button
-              onClick={() => {
-                setIsIframeMode(true);
-                setHasError(false);
-              }}
-              className="px-4 py-2 rounded-2xl glass-pill bg-white/20 hover:bg-white/30 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg cursor-pointer"
-            >
-              <Tv className="w-3.5 h-3.5 text-rose-300" />
-              Включить Плеер-Зеркало (YouTube Live)
-            </button>
+            {channel.backupUrl && currentMirror !== 'backup' && (
+              <button
+                onClick={() => {
+                  setCurrentMirror('backup');
+                  setIsIframeMode(false);
+                  setHasError(false);
+                }}
+                className="px-4 py-2 rounded-2xl glass-pill bg-white/20 hover:bg-white/30 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg cursor-pointer"
+              >
+                <Tv className="w-3.5 h-3.5 text-rose-300" />
+                Переключить на Резервный CDN
+              </button>
+            )}
+            {channel.embedUrl && (
+              <button
+                onClick={() => {
+                  setCurrentMirror('embed');
+                  setIsIframeMode(true);
+                  setHasError(false);
+                }}
+                className="px-4 py-2 rounded-2xl glass-pill bg-white/20 hover:bg-white/30 text-white font-soft text-xs flex items-center gap-2 border border-white/40 transition-all shadow-lg cursor-pointer"
+              >
+                <Tv className="w-3.5 h-3.5 text-rose-300" />
+                Официальный веб-плеер
+              </button>
+            )}
           </div>
         </div>
       )}

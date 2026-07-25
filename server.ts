@@ -105,7 +105,7 @@ async function loadLogoMap() {
 async function loadFamelackChannelsFromSource() {
   await loadLogoMap();
 
-  const targetCountries = ["ru", "us", "fr", "de", "es", "tr", "ua", "kz", "gb", "jp", "ca", "it"];
+  const targetCountries = ["ru", "us", "fr", "de", "es", "tr", "ua", "kz", "gb", "jp", "ca", "it", "br", "in", "pl", "ge", "am", "cn", "kr", "ae", "nl", "se", "au", "mx", "ar", "cl", "co", "at", "ch"];
   const categoriesList = ["news", "movies", "music", "sports", "kids", "documentary", "entertainment"];
 
   const categoryMapByNanoid: Record<string, string> = {};

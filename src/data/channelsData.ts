@@ -32,23 +32,57 @@ export async function fetchFamelackChannels(): Promise<Channel[]> {
 }
 
 export const INITIAL_CHANNELS: Channel[] = [
-  // --- НОВОСТИ И МИРОВЫЕ ЭФИРЫ (NEWS & WORLD LIVE) ---
+  // --- МИРОВЫЕ НОВОСТИ И МИРОВЫЕ ЭФИРЫ (GLOBAL NEWS & WORLD LIVE) ---
   {
-    id: 'famelack-3ABN-RU',
-    name: '3ABN Russia',
-    logo: 'https://i.imgur.com/uGzZ54H.png',
-    url: 'https://3abn.bozztv.com/3abn2/Rus_live/smil:Rus_live.smil/playlist.m3u8',
-    backupUrl: 'https://hls.tv.3angels.ru/stream.m3u8',
+    id: 'init-dw-en-DE',
+    name: 'Deutsche Welle (DW English)',
+    logo: 'https://i.imgur.com/K3G2sY8.png',
+    url: 'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8',
+    backupUrl: 'https://dwamdstream101.akamaized.net/hls/live/2015524/dwstream101/index.m3u8',
     embedUrl: '',
     category: 'news',
-    countryCode: 'RU',
-    countryName: 'Россия',
-    timezone: 'Europe/Moscow',
-    city: 'Москва',
-    language: 'Русский',
+    countryCode: 'DE',
+    countryName: 'Германия',
+    timezone: 'Europe/Berlin',
+    city: 'Берлин',
+    language: 'English',
     isHD: true,
     quality: '1080p',
-    description: 'Прямой эфир русского вещательного телеканала.'
+    description: 'Главный международный новостной телеканал Германии на английском языке.'
+  },
+  {
+    id: 'init-dw-de-DE',
+    name: 'Deutsche Welle (DW Deutsch)',
+    logo: 'https://i.imgur.com/K3G2sY8.png',
+    url: 'https://dwamdstream101.akamaized.net/hls/live/2015524/dwstream101/index.m3u8',
+    backupUrl: '',
+    embedUrl: '',
+    category: 'news',
+    countryCode: 'DE',
+    countryName: 'Германия',
+    timezone: 'Europe/Berlin',
+    city: 'Берлин',
+    language: 'Deutsch',
+    isHD: true,
+    quality: '1080p',
+    description: 'Немецкоязычное вещание канала Deutsche Welle со свежими мировыми новостями.'
+  },
+  {
+    id: 'init-trt-world-TR',
+    name: 'TRT World HD',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/e/eb/TRT_World_logo.svg',
+    url: 'https://tv-trtworld.medya.trt.com.tr/master.m3u8',
+    backupUrl: '',
+    embedUrl: '',
+    category: 'news',
+    countryCode: 'TR',
+    countryName: 'Турция',
+    timezone: 'Europe/Istanbul',
+    city: 'Стамбул',
+    language: 'English',
+    isHD: true,
+    quality: '1080p',
+    description: 'Круглосуточный турецкий международный новостной телеканал.'
   },
   {
     id: 'famelack-360-RU',
@@ -65,7 +99,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Русский',
     isHD: true,
     quality: '1080p',
-    description: 'Прямые трансляции главных событий, культура и новости Подмосковья.'
+    description: 'Прямые трансляции главных событий, культура и свежие новости.'
   },
   {
     id: 'famelack-360news-RU',
@@ -82,41 +116,24 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Русский',
     isHD: true,
     quality: '1080p',
-    description: 'Круглосуточные новости в прямом эфире.'
+    description: 'Информационное вещание 24/7.'
   },
   {
-    id: 'famelack-sitv86-RU',
-    name: 'СургутИнформТВ (СИТВ 86)',
-    logo: 'https://sitv.ru/images/logo.png',
-    url: 'https://sitv.ru/hls/s86.m3u8',
+    id: 'init-redbull-US',
+    name: 'Red Bull TV HD',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/e/eb/Red_Bull_Logo.svg',
+    url: 'https://rbmn-live.akamaized.net/hls/live/591070/FLO_RBMN_LIVE_1_3M/master.m3u8',
     backupUrl: '',
     embedUrl: '',
-    category: 'news',
-    countryCode: 'RU',
-    countryName: 'Россия',
-    timezone: 'Asia/Yekaterinburg',
-    city: 'Сургут',
-    language: 'Русский',
+    category: 'sports',
+    countryCode: 'US',
+    countryName: 'США / Экстрим',
+    timezone: 'America/New_York',
+    city: 'New York',
+    language: 'English',
     isHD: true,
     quality: '1080p',
-    description: 'Региональное вещание и актуальные новости Югры.'
-  },
-  {
-    id: 'famelack-15music-RU',
-    name: '15+ Music TV',
-    logo: 'https://i.imgur.com/7oNe8xj.png',
-    url: 'https://live.15plusmg.ru/memfs/ce3366b1-bf25-4e24-96bb-1adf0d44bd3d.m3u8',
-    backupUrl: '',
-    embedUrl: '',
-    category: 'music',
-    countryCode: 'RU',
-    countryName: 'Россия',
-    timezone: 'Europe/Moscow',
-    city: 'Москва',
-    language: 'Русский',
-    isHD: true,
-    quality: '1080p',
-    description: 'Современные музыкальные клипы и хиты в прямом эфире.'
+    description: 'Экстремальный спорт, состязания, автогонки и трюки в прямом эфире.'
   },
   {
     id: 'famelack-20min-FR',
@@ -153,23 +170,6 @@ export const INITIAL_CHANNELS: Channel[] = [
     description: 'Информационное вещание панафриканского канала Africa 24.'
   },
   {
-    id: 'famelack-alexberlin-DE',
-    name: 'Alex Berlin TV',
-    logo: 'https://i.imgur.com/K3G2sY8.png',
-    url: 'https://alex-stream.rosebud-media.de/bounce/alexlive.smil/playlist.m3u8',
-    backupUrl: '',
-    embedUrl: '',
-    category: 'entertainment',
-    countryCode: 'DE',
-    countryName: 'Германия',
-    timezone: 'Europe/Berlin',
-    city: 'Берлин',
-    language: 'Deutsch',
-    isHD: true,
-    quality: '1080p',
-    description: 'Общественное берлинское телевидение, культура и музыка.'
-  },
-  {
     id: 'famelack-ardalpha-DE',
     name: 'ARD-alpha Германия',
     logo: 'https://upload.wikimedia.org/wikipedia/commons/1/13/ARD_alpha_logo.svg',
@@ -187,6 +187,57 @@ export const INITIAL_CHANNELS: Channel[] = [
     description: 'Образовательные и познавательные программы от медиасети ARD.'
   },
   {
+    id: 'famelack-sitv86-RU',
+    name: 'СургутИнформТВ (СИТВ 86)',
+    logo: 'https://sitv.ru/images/logo.png',
+    url: 'https://sitv.ru/hls/s86.m3u8',
+    backupUrl: '',
+    embedUrl: '',
+    category: 'news',
+    countryCode: 'RU',
+    countryName: 'Россия',
+    timezone: 'Asia/Yekaterinburg',
+    city: 'Сургут',
+    language: 'Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Региональное вещание и актуальные новости.'
+  },
+  {
+    id: 'famelack-15music-RU',
+    name: '15+ Music TV',
+    logo: 'https://i.imgur.com/7oNe8xj.png',
+    url: 'https://live.15plusmg.ru/memfs/ce3366b1-bf25-4e24-96bb-1adf0d44bd3d.m3u8',
+    backupUrl: '',
+    embedUrl: '',
+    category: 'music',
+    countryCode: 'RU',
+    countryName: 'Россия',
+    timezone: 'Europe/Moscow',
+    city: 'Москва',
+    language: 'Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Современные музыкальные клипы и хиты в прямом эфире.'
+  },
+  {
+    id: 'famelack-3ABN-RU',
+    name: '3ABN Russia',
+    logo: 'https://i.imgur.com/uGzZ54H.png',
+    url: 'https://3abn.bozztv.com/3abn2/Rus_live/smil:Rus_live.smil/playlist.m3u8',
+    backupUrl: '',
+    embedUrl: '',
+    category: 'news',
+    countryCode: 'RU',
+    countryName: 'Россия',
+    timezone: 'Europe/Moscow',
+    city: 'Москва',
+    language: 'Русский',
+    isHD: true,
+    quality: '1080p',
+    description: 'Прямой эфир русскоязычного познавательного телеканала.'
+  },
+  {
     id: 'famelack-4uv-US',
     name: '4UV USA Network',
     logo: 'https://flagcdn.com/w160/us.png',
@@ -201,7 +252,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'English',
     isHD: true,
     quality: '1080p',
-    description: 'Американский развлекательный и молодежный канал от Famelack.'
+    description: 'Американский развлекательный и молодежный канал.'
   },
   {
     id: 'famelack-21jump-US',
@@ -293,7 +344,7 @@ export async function fetchIPTVOrgChannels(): Promise<Channel[]> {
         description: `Прямой эфир телеканала ${ch.name} (${ch.country_name || countryCode}).`
       });
 
-      if (fetchedChannels.length >= 800) break;
+      if (fetchedChannels.length >= 1500) break;
     }
 
     return fetchedChannels;

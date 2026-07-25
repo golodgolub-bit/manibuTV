@@ -8,6 +8,7 @@ interface Props {
   isFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
   totalChannels: number;
+  onGoHome?: () => void;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -17,6 +18,7 @@ export const Navbar: React.FC<Props> = ({
   isFavoritesOnly,
   onToggleFavoritesOnly,
   totalChannels,
+  onGoHome,
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full px-3 py-3.5">
@@ -24,15 +26,19 @@ export const Navbar: React.FC<Props> = ({
         
         {/* Brand Logo & Header */}
         <div className="flex items-center justify-between w-full lg:w-auto gap-3">
-          <div className="flex items-center gap-3">
+          <button 
+            onClick={onGoHome}
+            className="flex items-center gap-3 text-left group cursor-pointer focus:outline-none"
+            title="Перейти на главную страницу manibuTV"
+          >
             <div 
-              className="p-2.5 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-rose-600 text-white shadow-md border border-white/80 relative"
+              className="p-2.5 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-rose-600 text-white shadow-md border border-white/80 relative transition-transform group-hover:scale-105"
             >
               <Tv className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-script font-bold tracking-wide text-rose-950 text-lace-title leading-none">
+                <h1 className="text-2xl md:text-3xl font-script font-bold tracking-wide text-rose-950 text-lace-title leading-none group-hover:text-rose-600 transition-colors">
                   manibuTV
                 </h1>
                 <span className="text-[11px] font-soft px-2 py-0.5 rounded-full bg-rose-200/70 text-rose-900 border border-white font-semibold hidden sm:inline-block">
@@ -43,7 +49,7 @@ export const Navbar: React.FC<Props> = ({
                 {totalChannels} онлайн-каналов со всего мира • Бесплатно 24/7
               </p>
             </div>
-          </div>
+          </button>
 
           {/* Mobile Telegram Link */}
           <div className="flex items-center gap-2 lg:hidden">

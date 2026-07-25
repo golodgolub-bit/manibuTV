@@ -149,6 +149,14 @@ export default function App() {
     return channels.filter((c) => c.countryCode === code).length;
   }, [channels]);
 
+  const handleGoHome = useCallback(() => {
+    setSelectedChannel(null);
+    setSelectedCategory('ALL');
+    setSelectedCountry('ALL');
+    setSearchQuery('');
+    setIsFavoritesOnly(false);
+  }, []);
+
   return (
     <div className="min-h-screen pb-20 bg-[#fcf2f5] text-[#4a1525] relative selection:bg-rose-400 selection:text-white">
       
@@ -168,6 +176,7 @@ export default function App() {
         isFavoritesOnly={isFavoritesOnly}
         onToggleFavoritesOnly={() => setIsFavoritesOnly(!isFavoritesOnly)}
         totalChannels={channels.length}
+        onGoHome={handleGoHome}
       />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 mt-3 space-y-6">

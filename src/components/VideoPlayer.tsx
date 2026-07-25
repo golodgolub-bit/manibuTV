@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import { 
   Play, Pause, Volume2, VolumeX, Maximize2, Minimize2, 
@@ -36,6 +36,9 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   const [isIframeMode, setIsIframeMode] = useState<boolean>(channel.streamType === 'iframe' || false);
   const [isMirrorMenuOpen, setIsMirrorMenuOpen] = useState<boolean>(false);
 
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stallTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Helper to format embed URLs (YouTube or general iframe)
   const getEmbedUrl = (ch: Channel) => {
     const target = ch.embedUrl || ch.url;
@@ -59,9 +62,33 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   useEffect(() => {
     setCurrentMirror('primary');
     setIsIframeMode(channel.streamType === 'iframe' || false);
+    setHasError(false);
   }, [channel.id, channel.streamType]);
 
-  // Load HLS Stream
+  // Silent automatic failover logic to cycle mirrors
+  const handleSilentFailover = useCallback(() => {
+    if (currentMirror === 'primary' && channel.backupUrl) {
+      console.log('[manibuTV Silent Auto-Recovery] Switching to Backup CDN Mirror...');
+      setCurrentMirror('backup');
+      setIsIframeMode(false);
+    } else if (currentMirror !== 'embed' && channel.embedUrl) {
+      console.log('[manibuTV Silent Auto-Recovery] Switching to Web Live Mirror...');
+      setCurrentMirror('embed');
+      setIsIframeMode(true);
+      setIsLoading(false);
+      setHasError(false);
+    } else {
+      // Loop back to primary after 3 seconds silent delay
+      console.log('[manibuTV Silent Auto-Recovery] Retrying Primary Mirror in 3s...');
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = setTimeout(() => {
+        setCurrentMirror('primary');
+        setIsIframeMode(false);
+      }, 3000);
+    }
+  }, [currentMirror, channel.backupUrl, channel.embedUrl]);
+
+  // Load HLS Stream with automatic silent monitoring
   useEffect(() => {
     if (isIframeMode || currentMirror === 'embed') {
       setIsIframeMode(true);
@@ -91,6 +118,10 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         lowLatencyMode: true,
         backBufferLength: 60,
         maxBufferLength: isDataSaver ? 10 : 30,
+        manifestLoadingTimeOut: 8000,
+        manifestLoadingMaxRetry: 3,
+        levelLoadingTimeOut: 8000,
+        fragLoadingTimeOut: 10000,
       });
 
       hlsRef.current = hls;
@@ -100,13 +131,13 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
         setIsLoading(false);
+        setHasError(false);
         video.play().then(() => setIsPlaying(true)).catch(() => {
           video.muted = true;
           setIsMuted(true);
           video.play().then(() => setIsPlaying(true)).catch(() => {});
         });
 
-        // Extract available quality levels
         if (data.levels && data.levels.length > 0) {
           const qualities: StreamQuality[] = data.levels.map((lvl, index) => ({
             index,
@@ -128,20 +159,8 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
               hls.recoverMediaError();
               break;
             default:
-              // Automatic mirror failover sequence
-              if (currentMirror === 'primary' && channel.backupUrl) {
-                console.log('Primary mirror failed, trying backup mirror...');
-                setCurrentMirror('backup');
-              } else if (channel.embedUrl) {
-                console.log('HLS streams failed, switching to web mirror player...');
-                setCurrentMirror('embed');
-                setIsIframeMode(true);
-                setIsLoading(false);
-                setHasError(false);
-              } else {
-                setHasError(true);
-                setIsLoading(false);
-              }
+              // Silent failover without popping loud errors
+              handleSilentFailover();
               hls.destroy();
               break;
           }
@@ -151,38 +170,51 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       video.src = streamUrl;
       video.addEventListener('loadedmetadata', () => {
         setIsLoading(false);
+        setHasError(false);
         video.play().then(() => setIsPlaying(true)).catch(() => {});
       });
       video.addEventListener('error', () => {
-        if (currentMirror === 'primary' && channel.backupUrl) {
-          setCurrentMirror('backup');
-        } else if (channel.embedUrl) {
-          setCurrentMirror('embed');
-          setIsIframeMode(true);
-          setIsLoading(false);
-        } else {
-          setHasError(true);
-          setIsLoading(false);
-        }
+        handleSilentFailover();
       });
     } else {
-      if (channel.embedUrl) {
-        setCurrentMirror('embed');
-        setIsIframeMode(true);
-        setIsLoading(false);
-      } else {
-        setHasError(true);
-        setIsLoading(false);
-      }
+      handleSilentFailover();
     }
 
+    // Monitor playback stalling / buffer empty events
+    const handleWaiting = () => {
+      setIsLoading(true);
+      if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
+      // If stalled for > 3.5 seconds, silently attempt failover mirror
+      stallTimeoutRef.current = setTimeout(() => {
+        console.log('[manibuTV] Broadcast stalled, silently recovering...');
+        handleSilentFailover();
+      }, 3500);
+    };
+
+    const handlePlaying = () => {
+      setIsLoading(false);
+      setHasError(false);
+      if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
+    };
+
+    video.addEventListener('waiting', handleWaiting);
+    video.addEventListener('stalled', handleWaiting);
+    video.addEventListener('playing', handlePlaying);
+
     return () => {
+      video.removeEventListener('waiting', handleWaiting);
+      video.removeEventListener('stalled', handleWaiting);
+      video.removeEventListener('playing', handlePlaying);
+
+      if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
     };
-  }, [channel.url, channel.backupUrl, channel.embedUrl, isDataSaver, isIframeMode, currentMirror]);
+  }, [channel.url, channel.backupUrl, channel.embedUrl, isDataSaver, isIframeMode, currentMirror, handleSilentFailover]);
 
   const changeQuality = (index: number) => {
     setSelectedQualityIndex(index);

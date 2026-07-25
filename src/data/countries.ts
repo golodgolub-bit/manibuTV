@@ -1,0 +1,40 @@
+import { CountryInfo } from '../types';
+
+export const COUNTRIES: CountryInfo[] = [
+  { code: 'ALL', nameRu: 'Все страны', nameEn: 'All Countries', flag: '🌍', capital: 'Мир', timezone: 'UTC', region: 'Весь мир' },
+  { code: 'RU', nameRu: 'Россия', nameEn: 'Russia', flag: '🇷🇺', capital: 'Москва', timezone: 'Europe/Moscow', region: 'Евразия' },
+  { code: 'US', nameRu: 'США', nameEn: 'United States', flag: '🇺🇸', capital: 'Вашингтон', timezone: 'America/New_York', region: 'Северная Америка' },
+  { code: 'GB', nameRu: 'Великобритания', nameEn: 'United Kingdom', flag: '🇬🇧', capital: 'Лондон', timezone: 'Europe/London', region: 'Европа' },
+  { code: 'FR', nameRu: 'Франция', nameEn: 'France', flag: '🇫🇷', capital: 'Париж', timezone: 'Europe/Paris', region: 'Европа' },
+  { code: 'DE', nameRu: 'Германия', nameEn: 'Germany', flag: '🇩🇪', capital: 'Берлин', timezone: 'Europe/Berlin', region: 'Европа' },
+  { code: 'JP', nameRu: 'Япония', nameEn: 'Japan', flag: '🇯🇵', capital: 'Токио', timezone: 'Asia/Tokyo', region: 'Азия' },
+  { code: 'ES', nameRu: 'Испания', nameEn: 'Spain', flag: '🇪🇸', capital: 'Мадрид', timezone: 'Europe/Madrid', region: 'Европа' },
+  { code: 'IT', nameRu: 'Италия', nameEn: 'Italy', flag: '🇮🇹', capital: 'Рим', timezone: 'Europe/Rome', region: 'Европа' },
+  { code: 'CN', nameRu: 'Китай', nameEn: 'China', flag: '🇨🇳', capital: 'Пекин', timezone: 'Asia/Shanghai', region: 'Азия' },
+  { code: 'KR', nameRu: 'Южная Корея', nameEn: 'South Korea', flag: '🇰🇷', capital: 'Сеул', timezone: 'Asia/Seoul', region: 'Азия' },
+  { code: 'KZ', nameRu: 'Казахстан', nameEn: 'Kazakhstan', flag: '🇰🇿', capital: 'Астана', timezone: 'Asia/Almaty', region: 'Центральная Азия' },
+  { code: 'UA', nameRu: 'Украина', nameEn: 'Ukraine', flag: '🇺🇦', capital: 'Киев', timezone: 'Europe/Kyiv', region: 'Европа' },
+  { code: 'TR', nameRu: 'Турция', nameEn: 'Turkey', flag: '🇹🇷', capital: 'Анкара', timezone: 'Europe/Istanbul', region: 'Евразия' },
+  { code: 'AE', nameRu: 'ОАЭ', nameEn: 'UAE', flag: '🇦🇪', capital: 'Абу-Даби', timezone: 'Asia/Dubai', region: 'Ближний Восток' },
+  { code: 'CA', nameRu: 'Канада', nameEn: 'Canada', flag: '🇨🇦', capital: 'Оттава', timezone: 'America/Toronto', region: 'Северная Америка' },
+  { code: 'BR', nameRu: 'Бразилия', nameEn: 'Brazil', flag: '🇧🇷', capital: 'Бразилиа', timezone: 'America/Sao_Paulo', region: 'Южная Америка' },
+  { code: 'AM', nameRu: 'Армения', nameEn: 'Armenia', flag: '🇦🇲', capital: 'Ереван', timezone: 'Asia/Yerevan', region: 'Кавказ' },
+  { code: 'GE', nameRu: 'Грузия', nameEn: 'Georgia', flag: '🇬🇪', capital: 'Тбилиси', timezone: 'Asia/Tbilisi', region: 'Кавказ' },
+  { code: 'IN', nameRu: 'Индия', nameEn: 'India', flag: '🇮🇳', capital: 'Нью-Дели', timezone: 'Asia/Kolkata', region: 'Азия' },
+  { code: 'AU', nameRu: 'Австралия', nameEn: 'Australia', flag: '🇦🇺', capital: 'Канберра', timezone: 'Australia/Sydney', region: 'Океания' },
+  { code: 'MX', nameRu: 'Мексика', nameEn: 'Mexico', flag: '🇲🇽', capital: 'Мехико', timezone: 'America/Mexico_City', region: 'Северная Америка' },
+  { code: 'NL', nameRu: 'Нидерланды', nameEn: 'Netherlands', flag: '🇳🇱', capital: 'Амстердам', timezone: 'Europe/Amsterdam', region: 'Европа' },
+  { code: 'CH', nameRu: 'Швейцария', nameEn: 'Switzerland', flag: '🇨🇭', capital: 'Берн', timezone: 'Europe/Zurich', region: 'Европа' },
+];
+
+export const CATEGORIES = [
+  { id: 'ALL', nameRu: 'Все жанры', nameEn: 'All Genres', icon: '✨' },
+  { id: 'news', nameRu: 'Новости', nameEn: 'News', icon: '📰' },
+  { id: 'entertainment', nameRu: 'Развлечения', nameEn: 'Entertainment', icon: '🎭' },
+  { id: 'movies', nameRu: 'Фильмы & Сериалы', nameEn: 'Movies & Series', icon: '🎬' },
+  { id: 'music', nameRu: 'Музыка', nameEn: 'Music', icon: '🎵' },
+  { id: 'sports', nameRu: 'Спорт', nameEn: 'Sports', icon: '⚽' },
+  { id: 'kids', nameRu: 'Детские & Мультики', nameEn: 'Kids & Cartoons', icon: '🧸' },
+  { id: 'documentary', nameRu: 'Познавательные & Документальные', nameEn: 'Documentary', icon: '🌿' },
+  { id: 'lifestyle', nameRu: 'Стиль жизни & Еда', nameEn: 'Lifestyle', icon: '🌸' },
+];

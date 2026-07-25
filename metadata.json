@@ -1,0 +1,6 @@
+{
+  "name": "manibuTV - World Live Channels",
+  "description": "Бесплатное онлайн-телевидение manibuTV со всего мира. Прямые эфиры телеканалов в высоком качестве с возможностью выбора качества для любого интернета.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

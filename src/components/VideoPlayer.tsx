@@ -57,9 +57,14 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
   // Reset states on channel change
   useEffect(() => {
     setCurrentMirror('primary');
-    setIsIframeMode(channel.streamType === 'iframe');
+    const isEmbed = channel.streamType === 'iframe' || 
+      channel.url.includes('youtube.com') || 
+      channel.url.includes('youtu.be') || 
+      channel.url.includes('vimeo.com') || 
+      channel.url.includes('/embed/');
+    setIsIframeMode(isEmbed);
     setHasError(false);
-  }, [channel.id, channel.streamType]);
+  }, [channel.id, channel.streamType, channel.url]);
 
   // Silent failover logic
   const handleSilentFailover = useCallback(() => {
@@ -67,7 +72,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       console.log('[manibuTV] Primary stream unavailable, trying backup stream...');
       setCurrentMirror('backup');
       setIsIframeMode(false);
-    } else if (currentMirror !== 'embed' && channel.embedUrl) {
+    } else if (currentMirror !== 'embed' && (channel.embedUrl || channel.url.includes('youtube.com'))) {
       console.log('[manibuTV] Stream unavailable, trying web live embed URL...');
       setCurrentMirror('embed');
       setIsIframeMode(true);
@@ -78,7 +83,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
       setIsLoading(false);
       setHasError(true);
     }
-  }, [currentMirror, channel.backupUrl, channel.embedUrl]);
+  }, [currentMirror, channel.backupUrl, channel.embedUrl, channel.url]);
 
   // Load HLS Stream
   useEffect(() => {
@@ -110,23 +115,23 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 30,
-        maxBufferLength: isDataSaver ? 6 : 12,
-        maxMaxBufferLength: isDataSaver ? 12 : 24,
-        maxBufferSize: 30 * 1024 * 1024,
+        lowLatencyMode: false,
+        backBufferLength: 60,
+        maxBufferLength: isDataSaver ? 15 : 30,
+        maxMaxBufferLength: isDataSaver ? 30 : 60,
+        maxBufferSize: 60 * 1024 * 1024,
         maxBufferHole: 0.5,
         highBufferWatchdogPeriod: 2,
         nudgeOffset: 0.1,
         nudgeMaxRetry: 5,
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 10,
-        manifestLoadingTimeOut: 12000,
-        manifestLoadingMaxRetry: 4,
-        levelLoadingTimeOut: 12000,
-        levelLoadingMaxRetry: 4,
-        fragLoadingTimeOut: 15000,
-        fragLoadingMaxRetry: 6,
+        liveSyncDurationCount: 5,
+        liveMaxLatencyDurationCount: 15,
+        manifestLoadingTimeOut: 20000,
+        manifestLoadingMaxRetry: 5,
+        levelLoadingTimeOut: 20000,
+        levelLoadingMaxRetry: 5,
+        fragLoadingTimeOut: 30000,
+        fragLoadingMaxRetry: 8,
       });
 
       hlsRef.current = hls;
@@ -205,7 +210,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         } else {
           handleSilentFailover();
         }
-      }, 12000);
+      }, 25000);
     };
 
     const handlePlaying = () => {

@@ -3,6 +3,9 @@ import path from "path";
 import zlib from "zlib";
 import { createServer as createViteServer } from "vite";
 
+// Ignore SSL errors for fetching streams (many IPTV streams have invalid/expired certs)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
@@ -56,8 +59,224 @@ const categoryMap: Record<string, string> = {
   travel: "lifestyle"
 };
 
+// Comprehensive Russian Country Names & Capital Cities
+const countryNamesRuMap: Record<string, { country: string; capital: string }> = {
+  AD: { country: "Андорра", capital: "Андорра-ла-Велья" },
+  AE: { country: "ОАЭ", capital: "Дубай" },
+  AF: { country: "Афганистан", capital: "Кабул" },
+  AG: { country: "Антигуа и Барбуда", capital: "Сент-Джонс" },
+  AL: { country: "Албания", capital: "Тирана" },
+  AM: { country: "Армения", capital: "Ереван" },
+  AO: { country: "Ангола", capital: "Луанда" },
+  AR: { country: "Аргентина", capital: "Буэнос-Айрес" },
+  AT: { country: "Австрия", capital: "Вена" },
+  AU: { country: "Австралия", capital: "Сидней" },
+  AW: { country: "Аруба", capital: "Ораньестад" },
+  AZ: { country: "Азербайджан", capital: "Баку" },
+  BA: { country: "Босния и Герцеговина", capital: "Сараево" },
+  BD: { country: "Бангладеш", capital: "Дакка" },
+  BE: { country: "Бельгия", capital: "Брюссель" },
+  BF: { country: "Буркина-Фасо", capital: "Уагадугу" },
+  BG: { country: "Болгария", capital: "София" },
+  BH: { country: "Бахрейн", capital: "Манама" },
+  BJ: { country: "Бенин", capital: "Порто-Ново" },
+  BO: { country: "Боливия", capital: "Ла-Пас" },
+  BQ: { country: "Бонайре", capital: "Кралендейк" },
+  BR: { country: "Бразилия", capital: "Рио-де-Жанейро" },
+  BS: { country: "Багамы", capital: "Нассау" },
+  BY: { country: "Беларусь", capital: "Минск" },
+  BZ: { country: "Белиз", capital: "Бельмопан" },
+  CA: { country: "Канада", capital: "Торонто" },
+  CD: { country: "Конго (ДРК)", capital: "Киншаса" },
+  CG: { country: "Конго", capital: "Браззавиль" },
+  CH: { country: "Швейцария", capital: "Цюрих" },
+  CI: { country: "Кот-д'Ивуар", capital: "Ямусукро" },
+  CL: { country: "Чили", capital: "Сантьяго" },
+  CM: { country: "Камерун", capital: "Яунде" },
+  CN: { country: "Китай", capital: "Пекин" },
+  CO: { country: "Колумбия", capital: "Богота" },
+  CR: { country: "Коста-Рика", capital: "Сан-Хосе" },
+  CU: { country: "Куба", capital: "Гавана" },
+  CW: { country: "Кюрасао", capital: "Виллемстад" },
+  CY: { country: "Кипр", capital: "Никосия" },
+  CZ: { country: "Чехия", capital: "Прага" },
+  DE: { country: "Германия", capital: "Берлин" },
+  DJ: { country: "Джибути", capital: "Джибути" },
+  DK: { country: "Дания", capital: "Копенгаген" },
+  DO: { country: "Доминикана", capital: "Санто-Доминго" },
+  DZ: { country: "Алжир", capital: "Алжир" },
+  EC: { country: "Эквадор", capital: "Кито" },
+  EE: { country: "Эстония", capital: "Таллин" },
+  EG: { country: "Египет", capital: "Каир" },
+  ER: { country: "Эритрея", capital: "Асмэра" },
+  ES: { country: "Испания", capital: "Мадрид" },
+  ET: { country: "Эфиопия", capital: "Аддис-Абеба" },
+  FI: { country: "Финляндия", capital: "Хельсинки" },
+  FO: { country: "Фареры", capital: "Торсхавн" },
+  FR: { country: "Франция", capital: "Париж" },
+  GE: { country: "Грузия", capital: "Тбилиси" },
+  GF: { country: "Французская Гвиана", capital: "Кайенна" },
+  GH: { country: "Гана", capital: "Аккра" },
+  GL: { country: "Гренландия", capital: "Нуук" },
+  GM: { country: "Гамбия", capital: "Банжул" },
+  GN: { country: "Гвинея", capital: "Конакри" },
+  GP: { country: "Гваделупа", capital: "Бас-Тер" },
+  GR: { country: "Греция", capital: "Афины" },
+  GT: { country: "Гватемала", capital: "Гватемала" },
+  GU: { country: "Гуам", capital: "Хагатна" },
+  GY: { country: "Гайана", capital: "Джорджтаун" },
+  HK: { country: "Гонконг", capital: "Гонконг" },
+  HN: { country: "Гондурас", capital: "Тегусигальпа" },
+  HR: { country: "Хорватия", capital: "Загреб" },
+  HT: { country: "Гаити", capital: "Порт-о-Пренс" },
+  HU: { country: "Венгрия", capital: "Будапешт" },
+  ID: { country: "Индонезия", capital: "Джакарта" },
+  IE: { country: "Ирландия", capital: "Дублин" },
+  IL: { country: "Израиль", capital: "Иерусалим" },
+  IN: { country: "Индия", capital: "Нью-Дели" },
+  IQ: { country: "Ирак", capital: "Багдад" },
+  IR: { country: "Иран", capital: "Тегеран" },
+  IS: { country: "Исландия", capital: "Рейкьявик" },
+  IT: { country: "Италия", capital: "Рим" },
+  JM: { country: "Ямайка", capital: "Кингстон" },
+  JO: { country: "Иордания", capital: "Амман" },
+  JP: { country: "Япония", capital: "Токио" },
+  KE: { country: "Кения", capital: "Найроби" },
+  KH: { country: "Камбоджа", capital: "Пномпень" },
+  KN: { country: "Сент-Китс", capital: "Бастер" },
+  KR: { country: "Южная Корея", capital: "Сеул" },
+  KW: { country: "Кувейт", capital: "Эль-Кувейт" },
+  KZ: { country: "Казахстан", capital: "Астана" },
+  LA: { country: "Лаос", capital: "Вьентьян" },
+  LB: { country: "Ливан", capital: "Бейрут" },
+  LC: { country: "Сент-Люсия", capital: "Кастри" },
+  LK: { country: "Шри-Ланка", capital: "Коломбо" },
+  LT: { country: "Литва", capital: "Вильнюс" },
+  LU: { country: "Люксембург", capital: "Люксембург" },
+  LV: { country: "Латвия", capital: "Рига" },
+  LY: { country: "Ливия", capital: "Триполи" },
+  MA: { country: "Марокко", capital: "Рабат" },
+  MC: { country: "Монако", capital: "Монако" },
+  MD: { country: "Молдова", capital: "Кишинев" },
+  ME: { country: "Черногория", capital: "Подгорица" },
+  MK: { country: "Северная Македония", capital: "Скопье" },
+  ML: { country: "Мали", capital: "Бамако" },
+  MM: { country: "Мьянма", capital: "Нейпьидо" },
+  MN: { country: "Монголия", capital: "Улан-Батор" },
+  MO: { country: "Макао", capital: "Макао" },
+  MQ: { country: "Мартиника", capital: "Фор-де-Франс" },
+  MT: { country: "Мальта", capital: "Валлетта" },
+  MV: { country: "Мальдивы", capital: "Мале" },
+  MX: { country: "Мексика", capital: "Мехико" },
+  MY: { country: "Малайзия", capital: "Куала-Лумпур" },
+  MZ: { country: "Мозамбик", capital: "Мапуту" },
+  NE: { country: "Нигер", capital: "Ниамей" },
+  NG: { country: "Нигерия", capital: "Абуджа" },
+  NI: { country: "Никарагуа", capital: "Манагуа" },
+  NL: { country: "Нидерланды", capital: "Амстердам" },
+  NO: { country: "Норвегия", capital: "Осло" },
+  NP: { country: "Непал", capital: "Катманду" },
+  NZ: { country: "Новая Зеландия", capital: "Веллингтон" },
+  OM: { country: "Оман", capital: "Маскат" },
+  PA: { country: "Панама", capital: "Панама" },
+  PE: { country: "Перу", capital: "Лима" },
+  PG: { country: "Папуа — Новая Гвинея", capital: "Порт-Морсби" },
+  PH: { country: "Филиппины", capital: "Манила" },
+  PK: { country: "Пакистан", capital: "Исламабад" },
+  PL: { country: "Польша", capital: "Варшава" },
+  PR: { country: "Пуэрто-Рико", capital: "Сан-Хуан" },
+  PS: { country: "Палестина", capital: "Рамалла" },
+  PT: { country: "Португалия", capital: "Лиссабон" },
+  PY: { country: "Парагвай", capital: "Асунсьон" },
+  QA: { country: "Катар", capital: "Доха" },
+  RO: { country: "Румыния", capital: "Бухарест" },
+  RS: { country: "Сербия", capital: "Белград" },
+  RU: { country: "Россия", capital: "Москва" },
+  RW: { country: "Руанда", capital: "Кигали" },
+  SA: { country: "Саудовская Аравия", capital: "Эр-Рияд" },
+  SD: { country: "Судан", capital: "Хартум" },
+  SE: { country: "Швеция", capital: "Стокгольм" },
+  SG: { country: "Сингапур", capital: "Сингапур" },
+  SI: { country: "Словения", capital: "Любляна" },
+  SK: { country: "Словакия", capital: "Братислава" },
+  SL: { country: "Сьерра-Леоне", capital: "Фритаун" },
+  SN: { country: "Сенегал", capital: "Дакар" },
+  SR: { country: "Суринам", capital: "Парамарибо" },
+  SV: { country: "Сальвадор", capital: "Сан-Сальвадор" },
+  SX: { country: "Синт-Мартен", capital: "Филипсбург" },
+  SY: { country: "Сирия", capital: "Дамаск" },
+  TD: { country: "Чад", capital: "Нджамена" },
+  TG: { country: "Того", capital: "Ломе" },
+  TH: { country: "Таиланд", capital: "Бангкок" },
+  TJ: { country: "Таджикистан", capital: "Душанбе" },
+  TN: { country: "Тунис", capital: "Тунис" },
+  TR: { country: "Турция", capital: "Стамбул" },
+  TT: { country: "Тринидад и Тобаго", capital: "Порт-оф-Спейн" },
+  TW: { country: "Тайвань", capital: "Тайбэй" },
+  TZ: { country: "Танзания", capital: "Додома" },
+  UA: { country: "Украина", capital: "Киев" },
+  UG: { country: "Уганда", capital: "Кампала" },
+  UK: { country: "Великобритания", capital: "Лондон" },
+  GB: { country: "Великобритания", capital: "Лондон" },
+  US: { country: "США", capital: "Вашингтон" },
+  UY: { country: "Уругвай", capital: "Монтевидео" },
+  UZ: { country: "Узбекистан", capital: "Ташкент" },
+  VE: { country: "Венесуэла", capital: "Каракас" },
+  VG: { country: "Виргинские о-ва", capital: "Род-Таун" },
+  VN: { country: "Вьетнам", capital: "Ханой" },
+  XK: { country: "Косово", capital: "Приштина" },
+  YE: { country: "Йемен", capital: "Сана" },
+  ZA: { country: "ЮАР", capital: "Претория" },
+  ZW: { country: "Зимбабве", capital: "Хараре" }
+};
+
+const languageNameMap: Record<string, string> = {
+  rus: "Русский",
+  eng: "Английский",
+  fra: "Французский",
+  deu: "Немецкий",
+  ger: "Немецкий",
+  spa: "Испанский",
+  ita: "Итальянский",
+  por: "Португальский",
+  tur: "Турецкий",
+  zho: "Китайский",
+  chi: "Китайский",
+  jpn: "Японский",
+  kor: "Корейский",
+  ara: "Арабский",
+  ukr: "Украинский",
+  kaz: "Казахский",
+  kat: "Грузинский",
+  geo: "Грузинский",
+  hye: "Армянский",
+  arm: "Армянский",
+  pol: "Польский",
+  ron: "Румынский",
+  bul: "Болгарский",
+  srp: "Сербский",
+  ell: "Греческий",
+  gre: "Греческий",
+  hin: "Хинди",
+  ind: "Индонезийский",
+  vie: "Вьетнамский",
+  tha: "Тайский",
+  heb: "Иврит"
+};
+
 let logoByNameMap: Record<string, string> = {};
 let logoMapLoaded = false;
+
+function addLogoMapKey(key: string, url: string) {
+  if (!key) return;
+  const norm = key.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
+  if (norm && !logoByNameMap[norm]) logoByNameMap[norm] = url;
+  
+  const clean = key.toLowerCase()
+    .replace(/\b(hd|sd|live|tv|онлайн|канал|360|plus|\+)\b/gi, "")
+    .replace(/[^a-z0-9а-яё]/gi, "");
+  if (clean && !logoByNameMap[clean]) logoByNameMap[clean] = url;
+}
 
 async function loadLogoMap() {
   if (logoMapLoaded && Object.keys(logoByNameMap).length > 0) return;
@@ -80,16 +299,14 @@ async function loadLogoMap() {
       for (const c of channels) {
         const logoUrl = logoByChannelId[c.id];
         if (logoUrl) {
-          const norm = c.name.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
-          if (!logoByNameMap[norm]) logoByNameMap[norm] = logoUrl;
-          
-          const clean = c.name.toLowerCase().replace(/\b(hd|sd|live|tv|онлайн|канал)\b/gi, "").replace(/[^a-z0-9а-яё]/gi, "");
-          if (clean && !logoByNameMap[clean]) logoByNameMap[clean] = logoUrl;
+          addLogoMapKey(c.name, logoUrl);
+          addLogoMapKey(c.id, logoUrl);
+          const idWithoutExt = c.id.split(".")[0];
+          addLogoMapKey(idWithoutExt, logoUrl);
 
           if (c.alt_names && Array.isArray(c.alt_names)) {
             for (const alt of c.alt_names) {
-              const normAlt = alt.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
-              if (!logoByNameMap[normAlt]) logoByNameMap[normAlt] = logoUrl;
+              addLogoMapKey(alt, logoUrl);
             }
           }
         }
@@ -105,13 +322,19 @@ async function loadLogoMap() {
 const regionNamesRu = new Intl.DisplayNames(['ru'], { type: 'region' });
 
 function getCountryNameRu(code: string): string {
-  const c = code.toLowerCase();
-  if (countryNames[c]) return countryNames[c];
+  const upper = code.toUpperCase();
+  if (countryNamesRuMap[upper]) return countryNamesRuMap[upper].country;
   try {
-    return regionNamesRu.of(code.toUpperCase()) || code.toUpperCase();
+    return regionNamesRu.of(upper) || upper;
   } catch (e) {
-    return code.toUpperCase();
+    return upper;
   }
+}
+
+function getCityRu(code: string): string {
+  const upper = code.toUpperCase();
+  if (countryNamesRuMap[upper]) return countryNamesRuMap[upper].capital;
+  return getCountryNameRu(upper);
 }
 
 async function loadFamelackChannelsFromSource() {
@@ -164,10 +387,12 @@ async function loadFamelackChannelsFromSource() {
           const mappedCategory = categoryMap[rawCat] || "entertainment";
 
           const normName = item.name.toLowerCase().replace(/[^a-z0-9а-яё]/gi, "");
-          const cleanName = item.name.toLowerCase().replace(/\b(hd|sd|live|tv|онлайн|канал)\b/gi, "").replace(/[^a-z0-9а-яё]/gi, "");
+          const cleanName = item.name.toLowerCase().replace(/\b(hd|sd|live|tv|онлайн|канал|360|plus|\+)\b/gi, "").replace(/[^a-z0-9а-яё]/gi, "");
           const countryCodeUpper = (item.country || cc).toUpperCase();
 
           const matchedLogo = logoByNameMap[normName] || logoByNameMap[cleanName] || `https://flagcdn.com/w160/${countryCodeUpper.toLowerCase()}.png`;
+
+          const langList = item.languages ? item.languages.map((l: string) => languageNameMap[l.toLowerCase()] || l.toUpperCase()).join(", ") : "Русский";
 
           allChannels.push({
             id: "famelack-" + item.nanoid,
@@ -179,10 +404,11 @@ async function loadFamelackChannelsFromSource() {
             category: mappedCategory,
             countryCode: countryCodeUpper,
             countryName: getCountryNameRu(countryCodeUpper),
-            language: item.languages ? item.languages.join(", ") : "Русский / English",
+            city: getCityRu(countryCodeUpper),
+            language: langList,
             isHD: true,
             quality: "1080p",
-            description: `Официальная прямая трансляция канала ${item.name} в высоком качестве.`
+            description: `Официальная прямая трансляция канала ${item.name} (${getCountryNameRu(countryCodeUpper)}).`
           });
         }
       } catch (e) {
@@ -239,13 +465,15 @@ app.get("/api/proxy-hls", async (req, res) => {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     const response = await fetch(targetUrl, {
       signal: controller.signal,
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "*/*",
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Connection": "keep-alive",
         "Referer": new URL(targetUrl).origin + "/",
       },
     });
@@ -273,6 +501,9 @@ app.get("/api/proxy-hls", async (req, res) => {
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
       const text = await response.text();
       const baseUrl = finalUrl.substring(0, finalUrl.lastIndexOf("/") + 1);
+      
+      const parentUrlObj = new URL(finalUrl);
+      const parentSearch = parentUrlObj.search;
 
       const lines = text.split("\n");
       const rewrittenLines = lines.map((line) => {
@@ -281,8 +512,9 @@ app.get("/api/proxy-hls", async (req, res) => {
           if (trimmed.includes('URI="')) {
             return trimmed.replace(/URI="([^"]+)"/g, (_, p1) => {
               try {
-                const full = p1.startsWith("http") ? p1 : new URL(p1, baseUrl).href;
-                return `URI="/api/proxy-hls?url=${encodeURIComponent(full)}"`;
+                const fullObj = p1.startsWith("http") ? new URL(p1) : new URL(p1, baseUrl);
+                if (!fullObj.search && parentSearch) fullObj.search = parentSearch;
+                return `URI="/api/proxy-hls?url=${encodeURIComponent(fullObj.href)}"`;
               } catch {
                 return `URI="${p1}"`;
               }
@@ -291,8 +523,9 @@ app.get("/api/proxy-hls", async (req, res) => {
           return line;
         }
         try {
-          const absoluteUrl = trimmed.startsWith("http") ? trimmed : new URL(trimmed, baseUrl).href;
-          return `/api/proxy-hls?url=${encodeURIComponent(absoluteUrl)}`;
+          const absoluteObj = trimmed.startsWith("http") ? new URL(trimmed) : new URL(trimmed, baseUrl);
+          if (!absoluteObj.search && parentSearch) absoluteObj.search = parentSearch;
+          return `/api/proxy-hls?url=${encodeURIComponent(absoluteObj.href)}`;
         } catch {
           return line;
         }
@@ -308,7 +541,6 @@ app.get("/api/proxy-hls", async (req, res) => {
       
       if (response.body) {
         const { Readable } = await import("stream");
-        // Stream chunk bytes directly to client without loading entire segment into RAM
         return Readable.fromWeb(response.body as any).pipe(res);
       } else {
         const arrayBuffer = await response.arrayBuffer();

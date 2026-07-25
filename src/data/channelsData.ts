@@ -1,38 +1,6 @@
 import { Channel } from '../types';
 
 export const INITIAL_CHANNELS: Channel[] = [
-  // --- СПЕЦИАЛЬНЫЕ ЭФИРЫ И ОТСЫЛКИ (EASTER EGGS & SPECIAL STREAMS) ---
-  {
-    id: 'nibiru-presidential-2028',
-    name: '🪐 Нибиру 24/7 • Мария Нибиру 2028',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg',
-    url: 'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8',
-    category: 'news',
-    countryCode: 'US',
-    countryName: 'Планета Нибиру / США',
-    timezone: 'UTC',
-    city: 'Предвыборный штаб',
-    language: 'Русский / Нибируанский',
-    isHD: true,
-    quality: '4K Ultra HD',
-    description: 'Прямой эфир с Планеты Нибиру! Предвыборный штаб Марии Нибиру на пост Президента США 2028 года. В программе: Crumbl Cookies для каждого избирателя и дебаты.'
-  },
-  {
-    id: 'crumbl-bakery-live',
-    name: '🍪 Crumbl Cookies TV • Сладкий Эфир',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/c/c5/FashionTV_logo.png',
-    url: 'https://fashiontv-fashiontv-1-eu.rakuten.wurl.tv/playlist.m3u8',
-    category: 'lifestyle',
-    countryCode: 'US',
-    countryName: 'США',
-    timezone: 'America/New_York',
-    city: 'Crumbl Kitchen',
-    language: 'English / Русский',
-    isHD: true,
-    quality: '1080p',
-    description: 'Круглосуточные рецепты и выпечка фирменных печений Crumbl Cookies! Секретные вкусности и уютная атмосфера manibuTV.'
-  },
-
   // --- РОССИЯ (RU) ---
   {
     id: 'ru-russia24',
@@ -62,7 +30,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Русский',
     isHD: true,
     quality: '1080p',
-    description: 'Документальные фильмы, история и природные открытия.'
+    description: 'Документальные фильмы, история, наука и культура.'
   },
   {
     id: 'ru-rt-news',
@@ -92,7 +60,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Русский',
     isHD: true,
     quality: '1080p',
-    description: 'Мировая и российская поп-музыка, топовые клипы.'
+    description: 'Мировая и российская музыка, топовые клипы.'
   },
   {
     id: 'ru-mir24',
@@ -156,7 +124,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'English',
     isHD: true,
     quality: '1080p',
-    description: 'Прямые трансляции космоса, МКС и научных миссий NASA.'
+    description: 'Прямые трансляции космоса, МКС, наблюдения за планетами и исследования.'
   },
   {
     id: 'us-bloomberg',
@@ -186,7 +154,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'English',
     isHD: true,
     quality: '1080p',
-    description: 'Мировой экстрим, сёрфинг, гонки Formula 1 и мотокросс.'
+    description: 'Мировой экстрим, сёрфинг, гонки и активный спорт.'
   },
 
   // --- ГЕРМАНИЯ (DE) ---
@@ -254,7 +222,7 @@ export const INITIAL_CHANNELS: Channel[] = [
     language: 'Turkish / English',
     isHD: true,
     quality: '1080p',
-    description: 'Турецкие сериалы, прямые включения и культура.'
+    description: 'Прямые включения, новости и культура Турции.'
   }
 ];
 

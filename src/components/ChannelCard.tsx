@@ -77,14 +77,14 @@ export const ChannelCard: React.FC<Props> = React.memo(({
         </div>
       </div>
 
-      {/* Bottom live indicator and delicate text decoration */}
+      {/* Bottom live indicator */}
       <div className="mt-3 pt-2.5 border-t border-rose-200/50 flex items-center justify-between text-[10px] font-soft text-rose-700">
         <span className="flex items-center gap-1 font-semibold text-emerald-700">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
           В ЭФИРЕ
         </span>
-        <span className="text-rose-500 font-caveat text-xs font-bold">
-          (⁠*⁠˘⁠︶⁠˘⁠*⁠)⁠.⁠｡⁠*⁠♡
+        <span className="text-rose-500/80 font-medium text-[11px]">
+          1080p HD
         </span>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Globe2, Heart, ShieldCheck, Sparkles, Cookie } from 'lucide-react';
+import { Clock, MapPin, Globe2, Heart, ShieldCheck, Cookie } from 'lucide-react';
 import { Channel } from '../types';
 import { getTimezoneDetails } from '../utils/time';
 
@@ -117,10 +117,10 @@ export const ChannelDetailsBar: React.FC<Props> = ({
         </span>
         <span className="flex items-center gap-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          manibuTV High Quality Stream
+          manibuTV Stream Direct
         </span>
-        <span className="text-rose-600 font-caveat text-sm font-bold">
-          (⁠*⁠˘⁠︶⁠˘⁠*⁠)⁠.⁠｡⁠*⁠: Прямой эфир со всего мира
+        <span className="flex items-center gap-1 text-rose-800 font-medium text-xs">
+          Прямой эфир со всего мира
         </span>
       </div>
     </div>
@@ -132,7 +132,7 @@ function getCountryFlag(code: string): string {
     RU: '🇷🇺', US: '🇺🇸', GB: '🇬🇧', FR: '🇫🇷', DE: '🇩🇪',
     JP: '🇯🇵', ES: '🇪🇸', IT: '🇮🇹', CN: '🇨🇳', KR: '🇰🇷',
     KZ: '🇰🇿', UA: '🇺🇦', TR: '🇹🇷', AE: '🇦🇪', CA: '🇨🇦',
-    BR: '🇧🇷', AM: '🇦🇲', GE: '🇬🇪', IN: '🇮🇳', AU: 'AU'
+    BR: '🇧🇷', AM: '🇦🇲', GE: '🇬🇪', IN: '🇮🇳', AU: '🇦🇺'
   };
   return flags[code] || '🌐';
 }

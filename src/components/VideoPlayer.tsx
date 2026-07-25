@@ -240,13 +240,6 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
         <div className="px-3 py-1 rounded-2xl glass-pill backdrop-blur-xl border border-white/80 text-rose-950 font-script text-base font-bold shadow-md flex items-center gap-1.5">
           <Tv className="w-4 h-4 text-rose-600" />
           <span>manibuTV</span>
-          <span className="text-[10px] font-sans-ui text-rose-700 font-normal ml-1">
-            (⁠◕⁠‿⁠◕⁠)⁠♡
-          </span>
-        </div>
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-2xl bg-black/40 backdrop-blur-md text-[10px] text-emerald-300 font-soft border border-white/20">
-          <ShieldCheck className="w-3 h-3 text-emerald-400" />
-          CDN Edge Direct • Без лагов
         </div>
       </div>
 
@@ -269,7 +262,7 @@ export const VideoPlayer: React.FC<Props> = ({ channel }) => {
           <div className="w-12 h-12 rounded-full border-4 border-rose-300/30 border-t-rose-500 animate-spin mb-3" />
           <span className="font-soft text-xs text-rose-200 animate-pulse flex items-center gap-2">
             <Radio className="w-4 h-4 text-rose-400 animate-bounce" />
-            Подключение к прямому эфиру manibuTV...
+            Подключение к прямому эфиру...
           </span>
         </div>
       )}

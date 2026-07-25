@@ -28,18 +28,18 @@ export const SubtitlesOverlay: React.FC<Props> = ({
     }
 
     const samplePhrases = [
-      `Прямой эфир ${channelName} • События и новости часа в хорошем качестве`,
+      `Прямой эфир ${channelName} • Главные новости и события часа`,
       `В эфире информационно-аналитический выпуск программы`,
-      `Оставайтесь с нами, прямая трансляция телеканала продолжается`,
-      `Смотрите в следующем блоке: репортаж и последние мировые новости`,
-      `Интервью с экспертами и включения корреспондентов`
+      `Главные мировые события и репортажи корреспондентов`,
+      `Оставайтесь с нами, трансляция телеканала продолжается`,
+      `Смотрите в следующем выпуске: актуальные обзоры и аналитика`,
     ];
 
     let idx = 0;
     const interval = setInterval(() => {
       setCurrentText(samplePhrases[idx % samplePhrases.length]);
       idx++;
-    }, 7000);
+    }, 6000);
 
     setCurrentText(samplePhrases[0]);
 
@@ -59,7 +59,7 @@ export const SubtitlesOverlay: React.FC<Props> = ({
       <div className="pointer-events-auto mb-2 flex items-center gap-2 px-3 py-1 rounded-2xl glass-pill text-xs text-rose-950 border border-white/70 shadow-lg">
         <div className="flex items-center gap-1.5 font-medium">
           <Subtitles className="w-3.5 h-3.5 text-rose-600" />
-          <span>Субтитры</span>
+          <span>Субтитры manibuTV</span>
         </div>
         <button
           onClick={() => setFontSize(fontSize === 'sm' ? 'md' : fontSize === 'md' ? 'lg' : 'sm')}
@@ -71,7 +71,7 @@ export const SubtitlesOverlay: React.FC<Props> = ({
       </div>
 
       <div className={`pointer-events-auto text-center rounded-2xl glass-card backdrop-blur-xl border border-white/80 text-rose-950 font-medium shadow-xl transition-all duration-300 max-w-full ${fontClasses[fontSize]}`}>
-        <div className="leading-relaxed tracking-wide text-rose-950">
+        <div className="leading-relaxed tracking-wide text-rose-950 font-soft">
           {currentText}
         </div>
       </div>
